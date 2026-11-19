@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { StoreSettings, StoreOffer, Outlet, Product } from '../types';
+import { StoreSettings, StoreOffer, Outlet, Product, PartyPackage } from '../types';
 import { dbService, DEFAULT_STORE_SETTINGS } from '../services/db';
 
 interface SettingsContextType {
@@ -14,6 +14,9 @@ interface SettingsContextType {
   outlets: Outlet[];
   saveOutlet: (outlet: Outlet) => Promise<Outlet>;
   deleteOutlet: (id: string) => Promise<boolean>;
+  packages: PartyPackage[];
+  savePackage: (pkg: PartyPackage) => Promise<PartyPackage>;
+  deletePackage: (id: string) => Promise<boolean>;
   refreshAll: () => Promise<void>;
 }
 
@@ -31,6 +34,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [products, setProducts] = useState<Product[]>([]);
   const [offers, setOffers] = useState<StoreOffer[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [packages, setPackages] = useState<PartyPackage[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -46,6 +50,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const outs = await dbService.getOutlets();
       setOutlets(outs);
+
+      const pkgs = await dbService.getPartyPackages();
+      setPackages(pkgs);
 
       // 3. Sync latest settings and offers from Cloudflare D1
       const liveSettings = await dbService.fetchSettingsFromD1();
@@ -90,16 +97,25 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
+    const handlePackagesChange = (e: Event) => {
+      const customEvent = e as CustomEvent<PartyPackage[]>;
+      if (customEvent.detail) {
+        setPackages(customEvent.detail);
+      }
+    };
+
     window.addEventListener('mrbun-settings-changed', handleSettingsChange);
     window.addEventListener('mrbun-products-changed', handleProductsChange);
     window.addEventListener('mrbun-offers-changed', handleOffersChange);
     window.addEventListener('mrbun-outlets-changed', handleOutletsChange);
+    window.addEventListener('mrbun-packages-changed', handlePackagesChange);
 
     return () => {
       window.removeEventListener('mrbun-settings-changed', handleSettingsChange);
       window.removeEventListener('mrbun-products-changed', handleProductsChange);
       window.removeEventListener('mrbun-offers-changed', handleOffersChange);
       window.removeEventListener('mrbun-outlets-changed', handleOutletsChange);
+      window.removeEventListener('mrbun-packages-changed', handlePackagesChange);
     };
   }, [loadData]);
 
@@ -149,6 +165,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return res;
   };
 
+  const savePackage = async (pkg: PartyPackage): Promise<PartyPackage> => {
+    const saved = await dbService.savePartyPackage(pkg);
+    const updated = await dbService.getPartyPackages();
+    setPackages(updated);
+    return saved;
+  };
+
+  const deletePackage = async (id: string): Promise<boolean> => {
+    const res = await dbService.deletePartyPackage(id);
+    const updated = await dbService.getPartyPackages();
+    setPackages(updated);
+    return res;
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -163,6 +193,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         outlets,
         saveOutlet,
         deleteOutlet,
+        packages,
+        savePackage,
+        deletePackage,
         refreshAll: loadData
       }}
     >

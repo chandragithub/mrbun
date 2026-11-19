@@ -22,6 +22,7 @@ import { PartyPackage } from '../types';
 import { PARTY_PACKAGES } from '../data/partyPackages';
 import { dbService } from '../services/db';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 interface PartyOrderModalProps {
   isOpen: boolean;
@@ -37,10 +38,12 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
   initialGuests = 25
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { packages: dynamicPackages } = useSettings();
+  const availablePackages = dynamicPackages && dynamicPackages.length > 0 ? dynamicPackages : PARTY_PACKAGES;
 
   const [eventType, setEventType] = useState('Birthday Party');
   const [guestCount, setGuestCount] = useState(initialGuests);
-  const [selectedPackageId, setSelectedPackageId] = useState(preSelectedPackage?.id || PARTY_PACKAGES[0].id);
+  const [selectedPackageId, setSelectedPackageId] = useState(preSelectedPackage?.id || availablePackages[0].id);
   const [eventDate, setEventDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 2);
@@ -141,10 +144,11 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
     );
   }
 
-  const currentPkg = PARTY_PACKAGES.find((p) => p.id === selectedPackageId) || PARTY_PACKAGES[0];
-  const pricePerPerson = currentPkg.pricePerGuest;
-  const rawTotal = guestCount * pricePerPerson;
-  const discountRate = guestCount >= 30 ? 0.2 : guestCount >= 20 ? 0.15 : 0.1;
+  const currentPkg = availablePackages.find((p) => p.id === selectedPackageId) || availablePackages[0];
+  const isFixedPrice = currentPkg.priceType === 'fixed';
+  const unitPrice = currentPkg.price ?? currentPkg.pricePerGuest ?? 299;
+  const rawTotal = isFixedPrice ? unitPrice : guestCount * unitPrice;
+  const discountRate = isFixedPrice ? 0 : (guestCount >= 30 ? 0.2 : guestCount >= 20 ? 0.15 : 0.1);
   const discountAmount = Math.round(rawTotal * discountRate);
   const estimatedTotal = rawTotal - discountAmount;
 
@@ -299,14 +303,16 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Selected: <span className="font-bold text-amber-700">{currentPkg.title}</span>{' '}
-                <span className="text-slate-500">(@ ₹{currentPkg.pricePerGuest}/person)</span>
+                <span className="text-slate-600 font-semibold">
+                  ({isFixedPrice ? `₹${unitPrice.toLocaleString()} Fixed Lump Sum` : `₹${unitPrice}/person`})
+                </span>
               </p>
             </div>
 
             {/* Quick package changer pill */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
               <span className="text-slate-400 font-bold text-[10px] uppercase shrink-0">Switch Package:</span>
-              {PARTY_PACKAGES.map((pkg) => (
+              {availablePackages.map((pkg) => (
                 <button
                   key={pkg.id}
                   type="button"

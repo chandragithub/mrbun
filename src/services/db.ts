@@ -6,15 +6,18 @@ import {
   NotificationDispatch,
   StoreSettings,
   StoreOffer,
-  Outlet
+  Outlet,
+  PartyPackage
 } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
+import { PARTY_PACKAGES } from '../data/partyPackages';
 
 // Local Cache Keys for Instant UI rendering & Offline Resilience
 const SETTINGS_STORAGE_KEY = 'mrbun_settings_v3';
 const PRODUCTS_STORAGE_KEY = 'mrbun_products_v3';
 const OFFERS_STORAGE_KEY = 'mrbun_offers_v3';
 const OUTLETS_STORAGE_KEY = 'mrbun_outlets_v3';
+const PACKAGES_STORAGE_KEY = 'mrbun_packages_v3';
 const USERS_STORAGE_KEY = 'mrbun_users_db_v2';
 const ORDERS_STORAGE_KEY = 'mrbun_orders_db_v2';
 const PARTY_ORDERS_STORAGE_KEY = 'mrbun_party_orders_db_v2';
@@ -824,6 +827,57 @@ export const dbService = {
     });
 
     return booking || null;
+  },
+
+  // 7b. Curated Celebration Packages (Dynamic Admin Package Customization in Cloudflare D1)
+  getPartyPackages: async (): Promise<PartyPackage[]> => {
+    const res = await apiCall<{ success: boolean; packages: PartyPackage[] }>('/api/packages');
+    if (res.success && res.data?.packages && res.data.packages.length > 0) {
+      const pkgs = res.data.packages;
+      setStoredData(PACKAGES_STORAGE_KEY, pkgs);
+      return pkgs;
+    }
+    return getStoredData<PartyPackage[]>(PACKAGES_STORAGE_KEY, PARTY_PACKAGES);
+  },
+
+  fetchPartyPackagesFromD1: async (): Promise<PartyPackage[]> => {
+    return dbService.getPartyPackages();
+  },
+
+  savePartyPackage: async (pkg: PartyPackage): Promise<PartyPackage> => {
+    const pkgs = getStoredData<PartyPackage[]>(PACKAGES_STORAGE_KEY, PARTY_PACKAGES);
+    const idx = pkgs.findIndex(p => p.id === pkg.id);
+
+    if (idx >= 0) {
+      pkgs[idx] = pkg;
+    } else {
+      pkgs.push(pkg);
+    }
+
+    setStoredData(PACKAGES_STORAGE_KEY, pkgs);
+    window.dispatchEvent(new CustomEvent('mrbun-packages-changed', { detail: pkgs }));
+
+    // Persist to Cloudflare D1
+    await apiCall('/api/packages', {
+      method: 'POST',
+      body: JSON.stringify(pkg)
+    });
+
+    return pkg;
+  },
+
+  deletePartyPackage: async (id: string): Promise<boolean> => {
+    const pkgs = getStoredData<PartyPackage[]>(PACKAGES_STORAGE_KEY, PARTY_PACKAGES);
+    const filtered = pkgs.filter(p => p.id !== id);
+    setStoredData(PACKAGES_STORAGE_KEY, filtered);
+    window.dispatchEvent(new CustomEvent('mrbun-packages-changed', { detail: filtered }));
+
+    // Delete from Cloudflare D1
+    await apiCall(`/api/packages/${id}`, {
+      method: 'DELETE'
+    });
+
+    return true;
   },
 
   // 8. Franchise Expression of Interest in Cloudflare D1

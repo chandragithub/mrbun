@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PartyPopper, Users, Sparkles, Check, ArrowRight, ShieldCheck, PhoneCall, Gift, Calculator } from 'lucide-react';
 import { PARTY_PACKAGES } from '../data/partyPackages';
 import { PartyPackage } from '../types';
+import { useSettings } from '../context/SettingsContext';
 
 interface PartyOrderSectionProps {
   onSelectPackageForBooking: (pkg: PartyPackage, guests: number) => void;
@@ -12,6 +13,8 @@ export const PartyOrderSection: React.FC<PartyOrderSectionProps> = ({
   onSelectPackageForBooking,
   onOpenCustomBooking
 }) => {
+  const { packages } = useSettings();
+  const displayPackages = packages && packages.length > 0 ? packages : PARTY_PACKAGES;
   const [calculatorGuests, setCalculatorGuests] = useState(25);
 
   return (
@@ -110,7 +113,7 @@ export const PartyOrderSection: React.FC<PartyOrderSectionProps> = ({
 
         {/* Pre-designed Party Packages Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PARTY_PACKAGES.map((pkg) => (
+          {displayPackages.map((pkg) => (
             <div
               key={pkg.id}
               className="bg-white rounded-3xl overflow-hidden border border-amber-200/80 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
@@ -141,14 +144,16 @@ export const PartyOrderSection: React.FC<PartyOrderSectionProps> = ({
                     </h4>
                   </div>
                   
-                  <div className="mt-2 flex items-baseline gap-1">
+                  <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
                     <span className="text-2xl font-black text-amber-600 font-display">
-                      ₹{pkg.pricePerGuest}
+                      ₹{(pkg.price ?? pkg.pricePerGuest ?? 299).toLocaleString()}
                     </span>
-                    <span className="text-xs text-slate-500 font-semibold">/ person</span>
+                    <span className="text-xs text-slate-500 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                      {pkg.priceType === 'fixed' ? 'Fixed Lump Sum' : '/ person'}
+                    </span>
                   </div>
 
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  <p className="text-xs text-slate-500 mt-2 line-clamp-2">
                     {pkg.tagline}
                   </p>
 
@@ -157,10 +162,10 @@ export const PartyOrderSection: React.FC<PartyOrderSectionProps> = ({
                     <p className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">
                       Package Includes:
                     </p>
-                    {pkg.includes.slice(0, 4).map((inc, i) => (
+                    {(pkg.includes || []).map((inc, i) => (
                       <div key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <span className="line-clamp-1">{inc}</span>
+                        <span className="line-clamp-2">{inc}</span>
                       </div>
                     ))}
                   </div>

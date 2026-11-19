@@ -87,12 +87,14 @@ export interface PartyPackage {
   title: string;
   tagline: string;
   minGuests: number;
-  pricePerGuest: number;
+  price: number;
+  priceType: 'per_plate' | 'fixed'; // 'per_plate' (e.g. ₹299/person) or 'fixed' (e.g. ₹4,999 lump sum)
+  pricePerGuest?: number; // legacy backward compatibility
   badge?: string;
   image: string;
-  includes: string[];
-  recommendedFor: string;
-  popularItems: string[];
+  includes: string[]; // List of package features / inclusions
+  recommendedFor?: string;
+  popularItems?: string[];
 }
 
 export interface PartyOrderBooking {

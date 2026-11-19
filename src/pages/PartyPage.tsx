@@ -17,10 +17,14 @@ import {
 import { PARTY_PACKAGES } from '../data/partyPackages';
 import { PartyPackage } from '../types';
 import { PartyOrderModal } from '../components/PartyOrderModal';
+import { useSettings } from '../context/SettingsContext';
 
 export const PartyPage: React.FC = () => {
+  const { packages: dynamicPackages } = useSettings();
+  const displayPackages = dynamicPackages && dynamicPackages.length > 0 ? dynamicPackages : PARTY_PACKAGES;
+
   const [calculatorGuests, setCalculatorGuests] = useState(25);
-  const [modalPackage, setModalPackage] = useState<PartyPackage>(PARTY_PACKAGES[0]);
+  const [modalPackage, setModalPackage] = useState<PartyPackage>(displayPackages[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalGuests, setModalGuests] = useState(25);
 
@@ -135,7 +139,7 @@ export const PartyPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {PARTY_PACKAGES.map((pkg) => (
+            {displayPackages.map((pkg) => (
               <div
                 key={pkg.id}
                 onClick={() => handleOpenPackageDialog(pkg)}
@@ -163,14 +167,16 @@ export const PartyPage: React.FC = () => {
                       {pkg.title}
                     </h3>
                     
-                    <div className="mt-2 flex items-baseline gap-1">
+                    <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
                       <span className="text-2xl font-black text-amber-600 font-display">
-                        ₹{pkg.pricePerGuest}
+                        ₹{(pkg.price ?? pkg.pricePerGuest ?? 299).toLocaleString()}
                       </span>
-                      <span className="text-xs text-slate-500 font-semibold">/ person</span>
+                      <span className="text-xs text-slate-500 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                        {pkg.priceType === 'fixed' ? 'Fixed Lump Sum' : '/ person (Per Plate)'}
+                      </span>
                     </div>
 
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">
                       {pkg.tagline}
                     </p>
 
@@ -178,10 +184,10 @@ export const PartyPage: React.FC = () => {
                       <p className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">
                         Package Includes:
                       </p>
-                      {pkg.includes.slice(0, 4).map((inc, i) => (
+                      {(pkg.includes || []).map((inc, i) => (
                         <div key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
                           <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                          <span className="line-clamp-1">{inc}</span>
+                          <span className="line-clamp-2">{inc}</span>
                         </div>
                       ))}
                     </div>

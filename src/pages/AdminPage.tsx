@@ -51,7 +51,8 @@ import {
   CategoryType, 
   StoreOffer, 
   Outlet, 
-  StoreSettings 
+  StoreSettings,
+  PartyPackage
 } from '../types';
 
 export const AdminPage: React.FC = () => {
@@ -67,10 +68,13 @@ export const AdminPage: React.FC = () => {
     deleteOffer, 
     outlets, 
     saveOutlet, 
-    deleteOutlet 
+    deleteOutlet,
+    packages,
+    savePackage,
+    deletePackage
   } = useSettings();
   
-  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'db'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'db'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [parties, setParties] = useState<PartyOrderBooking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,6 +140,24 @@ export const AdminPage: React.FC = () => {
     isFlagship: false
   });
   const [outletFeaturesInput, setOutletFeaturesInput] = useState('');
+
+  // Celebration Package Modal State
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<PartyPackage | null>(null);
+  const [packageForm, setPackageForm] = useState<Partial<PartyPackage>>({
+    title: '',
+    tagline: '',
+    minGuests: 15,
+    price: 299,
+    priceType: 'per_plate',
+    badge: 'MOST POPULAR FOR BIRTHDAYS',
+    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80',
+    includes: [],
+    recommendedFor: 'Birthdays, Parties, Celebrations'
+  });
+  const [newIncludeItem, setNewIncludeItem] = useState('');
+  const [editingIncludeIndex, setEditingIncludeIndex] = useState<number | null>(null);
+  const [editingIncludeText, setEditingIncludeText] = useState('');
 
   // Payment Options Form State
   const [paymentForm, setPaymentForm] = useState(settings.paymentOptions);
@@ -441,6 +463,136 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // --- CELEBRATION PACKAGES HANDLERS ---
+  const handleOpenAddPackage = () => {
+    setEditingPackage(null);
+    setPackageForm({
+      title: '',
+      tagline: '',
+      minGuests: 15,
+      price: 299,
+      priceType: 'per_plate',
+      badge: 'CHEF SPECIAL',
+      image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80',
+      includes: [
+        'Choice of 2 Signature Burgers (Veg / Non-Veg)',
+        'Assorted Medium Cheese Burst Pizzas',
+        'Crispy Peri Peri Crinkle Fries platters',
+        'Unlimited Chilled Beverage Pitchers (Virgin Mojito / Cola)'
+      ],
+      recommendedFor: 'Birthdays, Office Celebrations, Friends Hangout'
+    });
+    setNewIncludeItem('');
+    setEditingIncludeIndex(null);
+    setIsPackageModalOpen(true);
+  };
+
+  const handleOpenEditPackage = (pkg: PartyPackage) => {
+    setEditingPackage(pkg);
+    setPackageForm({
+      ...pkg,
+      price: pkg.price ?? pkg.pricePerGuest ?? 299,
+      priceType: pkg.priceType || 'per_plate',
+      includes: [...(pkg.includes || [])]
+    });
+    setNewIncludeItem('');
+    setEditingIncludeIndex(null);
+    setIsPackageModalOpen(true);
+  };
+
+  const handlePackageImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image file is larger than 2MB. Please choose an image under 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setPackageForm(prev => ({ ...prev, image: reader.result as string }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddIncludeItem = () => {
+    if (!newIncludeItem.trim()) return;
+    setPackageForm(prev => ({
+      ...prev,
+      includes: [...(prev.includes || []), newIncludeItem.trim()]
+    }));
+    setNewIncludeItem('');
+  };
+
+  const handleDeleteIncludeItem = (index: number) => {
+    setPackageForm(prev => ({
+      ...prev,
+      includes: (prev.includes || []).filter((_, i) => i !== index)
+    }));
+    if (editingIncludeIndex === index) {
+      setEditingIncludeIndex(null);
+    }
+  };
+
+  const handleStartEditInclude = (index: number) => {
+    setEditingIncludeIndex(index);
+    setEditingIncludeText(packageForm.includes?.[index] || '');
+  };
+
+  const handleSaveEditInclude = (index: number) => {
+    if (!editingIncludeText.trim()) return;
+    setPackageForm(prev => {
+      const updated = [...(prev.includes || [])];
+      updated[index] = editingIncludeText.trim();
+      return { ...prev, includes: updated };
+    });
+    setEditingIncludeIndex(null);
+    setEditingIncludeText('');
+  };
+
+  const handleCancelEditInclude = () => {
+    setEditingIncludeIndex(null);
+    setEditingIncludeText('');
+  };
+
+  const handleSavePackageForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!packageForm.title || !packageForm.price) {
+      alert('Please fill in package title and price.');
+      return;
+    }
+
+    const pkgToSave: PartyPackage = {
+      id: editingPackage ? editingPackage.id : `pkg-${Date.now()}`,
+      title: packageForm.title || 'Celebration Feast',
+      tagline: packageForm.tagline || '',
+      minGuests: Number(packageForm.minGuests) || 10,
+      price: Number(packageForm.price) || 299,
+      priceType: (packageForm.priceType || 'per_plate') as 'per_plate' | 'fixed',
+      pricePerGuest: Number(packageForm.price) || 299,
+      badge: packageForm.badge || '',
+      image: packageForm.image || 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80',
+      includes: (packageForm.includes && packageForm.includes.length > 0)
+        ? packageForm.includes
+        : ['Signature Food Items', 'Crispy Golden Fries', 'Chilled Beverages'],
+      recommendedFor: packageForm.recommendedFor || 'Celebrations',
+      popularItems: editingPackage?.popularItems || ['Burger', 'Pizza', 'Mocktail']
+    };
+
+    await savePackage(pkgToSave);
+    setIsPackageModalOpen(false);
+    showNotification(`🎉 Package "${pkgToSave.title}" saved to Cloudflare D1!`);
+  };
+
+  const handleDeletePackageItem = async (pkg: PartyPackage) => {
+    if (confirm(`Are you sure you want to delete package "${pkg.title}"?`)) {
+      await deletePackage(pkg.id);
+      showNotification(`Package "${pkg.title}" removed.`);
+    }
+  };
+
   // --- PAYMENT SETTINGS HANDLER ---
   const handleSavePaymentSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -712,6 +864,19 @@ export const AdminPage: React.FC = () => {
                 {pendingParties.length}
               </span>
             )}
+          </button>
+
+          {/* Celebration Packages */}
+          <button
+            onClick={() => setActiveTab('packages')}
+            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              activeTab === 'packages'
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Celebration Packages ({packages.length})</span>
           </button>
 
           {/* 1 & 2. Logo & Brand Identity */}
@@ -1065,6 +1230,131 @@ export const AdminPage: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {/* TAB: CELEBRATION PACKAGES DYNAMIC MANAGEMENT */}
+        {activeTab === 'packages' && (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 font-display flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-600" />
+                  <span>Curated Celebration Packages &amp; Feasts</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Dynamically customize celebration packages: manage package title, image, price, pricing mode (per-plate / per-person vs fixed lump sum), and package description bullet list items.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenAddPackage}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Package</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Packages Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {packages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="bg-white rounded-3xl overflow-hidden border border-amber-200/90 shadow-md hover:shadow-xl transition flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Image with badges */}
+                    <div className="relative aspect-[16/10] overflow-hidden bg-amber-100">
+                      <img
+                        src={pkg.image}
+                        alt={pkg.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                      {pkg.badge && (
+                        <span className="absolute top-2.5 left-2.5 bg-red-600 text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow">
+                          {pkg.badge}
+                        </span>
+                      )}
+                      <div className="absolute bottom-2 right-2.5 bg-black/75 backdrop-blur-xs px-2.5 py-0.5 rounded-full text-[11px] font-bold text-amber-300">
+                        Min {pkg.minGuests} Guests
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 group-hover:text-amber-700 transition">
+                          {pkg.title}
+                        </h3>
+                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                          {pkg.tagline}
+                        </p>
+                      </div>
+
+                      {/* Pricing badge */}
+                      <div className="bg-amber-50/80 p-2.5 rounded-2xl border border-amber-200/70 flex items-baseline justify-between">
+                        <div>
+                          <span className="text-xl font-black text-amber-600 font-display">
+                            ₹{(pkg.price ?? pkg.pricePerGuest ?? 299).toLocaleString()}
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-600 ml-1">
+                            {pkg.priceType === 'fixed' ? 'Fixed Lump Sum' : '/ person'}
+                          </span>
+                        </div>
+                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                          pkg.priceType === 'fixed' ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {pkg.priceType === 'fixed' ? 'Fixed Price' : 'Per Plate'}
+                        </span>
+                      </div>
+
+                      {/* Inclusions list */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                          <span>Package Includes:</span>
+                          <span className="text-amber-700 font-bold font-mono">{pkg.includes?.length || 0} bullets</span>
+                        </div>
+                        <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                          {(pkg.includes || []).map((inc, i) => (
+                            <div key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                              <span className="text-[11px] leading-tight">{inc}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions (Edit / Delete) */}
+                  <div className="p-4 pt-0 border-t border-slate-100 flex items-center justify-between gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditPackage(pkg)}
+                      className="flex-1 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit Package</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePackageItem(pkg)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                      title="Delete package"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -2216,6 +2506,400 @@ export const AdminPage: React.FC = () => {
                   Save Outlet
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT CELEBRATION PACKAGE MODAL --- */}
+      {isPackageModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in">
+          <div className="relative bg-white w-full max-w-2xl max-h-[92vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-amber-200 my-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-amber-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 font-display">
+                    {editingPackage ? 'Edit Celebration Package' : 'Create New Celebration Package'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Set package title, image, price, pricing mode, and dynamic description list.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPackageModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSavePackageForm} className="p-6 overflow-y-auto flex-1 space-y-5">
+              
+              {/* Package Title & Ribbon Badge */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Package Name / Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={packageForm.title || ''}
+                    onChange={(e) => setPackageForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g. Birthday Bash Mega Feast"
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Badge / Tagline Ribbon (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={packageForm.badge || ''}
+                    onChange={(e) => setPackageForm(prev => ({ ...prev, badge: e.target.value }))}
+                    placeholder="e.g. MOST POPULAR FOR BIRTHDAYS, GST INCLUDED"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Tagline / Subtitle */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Tagline / Short Summary
+                </label>
+                <input
+                  type="text"
+                  value={packageForm.tagline || ''}
+                  onChange={(e) => setPackageForm(prev => ({ ...prev, tagline: e.target.value }))}
+                  placeholder="e.g. Ideal for 15 to 60+ guests! Bursting with burgers, pizzas, fries, mocktails & cake."
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Price Type & Price & Min Guests */}
+              <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200 space-y-3">
+                <label className="block text-xs font-extrabold text-amber-950 uppercase tracking-wider">
+                  Pricing Mode &amp; Amount
+                </label>
+                
+                {/* Radio buttons for per plate vs fixed */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
+                    packageForm.priceType === 'per_plate' 
+                      ? 'border-amber-500 bg-white ring-2 ring-amber-500/20 shadow-xs' 
+                      : 'border-slate-200 bg-white/70 hover:bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="packagePriceType"
+                      value="per_plate"
+                      checked={packageForm.priceType === 'per_plate'}
+                      onChange={() => setPackageForm(prev => ({ ...prev, priceType: 'per_plate' }))}
+                      className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="block text-xs font-black text-slate-900">Per Plate / Per Person</span>
+                      <span className="block text-[11px] text-slate-500">
+                        Total = Guest Count × Price (e.g. ₹299 / guest)
+                      </span>
+                    </div>
+                  </label>
+
+                  <label className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
+                    packageForm.priceType === 'fixed' 
+                      ? 'border-amber-500 bg-white ring-2 ring-amber-500/20 shadow-xs' 
+                      : 'border-slate-200 bg-white/70 hover:bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="packagePriceType"
+                      value="fixed"
+                      checked={packageForm.priceType === 'fixed'}
+                      onChange={() => setPackageForm(prev => ({ ...prev, priceType: 'fixed' }))}
+                      className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="block text-xs font-black text-slate-900">Fixed Package Lump Sum</span>
+                      <span className="block text-[11px] text-slate-500">
+                        Flat total package fee regardless of guests (e.g. ₹4,999)
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {packageForm.priceType === 'fixed' ? 'Fixed Lump Sum Price (₹)' : 'Price Per Person / Plate (₹)'} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={packageForm.price || ''}
+                        onChange={(e) => setPackageForm(prev => ({ ...prev, price: Number(e.target.value) }))}
+                        placeholder={packageForm.priceType === 'fixed' ? '4999' : '299'}
+                        className="w-full text-xs pl-7 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 bg-white font-bold"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Minimum Guests Requirement
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={packageForm.minGuests || 10}
+                      onChange={(e) => setPackageForm(prev => ({ ...prev, minGuests: Number(e.target.value) }))}
+                      placeholder="15"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 bg-white font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Package Image & Upload */}
+              <div className="space-y-3">
+                <label className="block text-xs font-bold text-slate-700">
+                  Package Image (Upload or Image URL)
+                </label>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Thumbnail Preview */}
+                  <div className="w-28 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                    <img
+                      src={packageForm.image || 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80'}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80'; }}
+                    />
+                  </div>
+
+                  <div className="flex-1 w-full space-y-2">
+                    <input
+                      type="url"
+                      value={packageForm.image || ''}
+                      onChange={(e) => setPackageForm(prev => ({ ...prev, image: e.target.value }))}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    />
+                    
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePackageImageUpload}
+                        className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preset image suggestions */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => setPackageForm(prev => ({ ...prev, image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80' }))}
+                    className="text-[10px] bg-slate-100 hover:bg-amber-100 text-slate-600 px-2 py-0.5 rounded-md"
+                  >
+                    🎈 Birthday Feast
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageForm(prev => ({ ...prev, image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80' }))}
+                    className="text-[10px] bg-slate-100 hover:bg-amber-100 text-slate-600 px-2 py-0.5 rounded-md"
+                  >
+                    💼 Corporate Bento
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageForm(prev => ({ ...prev, image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=800&q=80' }))}
+                    className="text-[10px] bg-slate-100 hover:bg-amber-100 text-slate-600 px-2 py-0.5 rounded-md"
+                  >
+                    🎉 Grand Buffet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageForm(prev => ({ ...prev, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80' }))}
+                    className="text-[10px] bg-slate-100 hover:bg-amber-100 text-slate-600 px-2 py-0.5 rounded-md"
+                  >
+                    🍔 House Party
+                  </button>
+                </div>
+              </div>
+
+              {/* DYNAMIC LIST OF INCLUSIONS / DESCRIPTIONS */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-xs font-black text-slate-900">
+                      Descriptions in List Format (&quot;Package Includes&quot;)
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Add multiple list items, edit them in place, or delete them anytime.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                    {packageForm.includes?.length || 0} items
+                  </span>
+                </div>
+
+                {/* Add new item to list input bar */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newIncludeItem}
+                    onChange={(e) => setNewIncludeItem(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddIncludeItem();
+                      }
+                    }}
+                    placeholder="Type item description (e.g. Choice of 2 Gourmet Burgers)..."
+                    className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddIncludeItem}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-1 shrink-0 shadow-xs"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add to List</span>
+                  </button>
+                </div>
+
+                {/* Render List Items with Inline Edit and Delete controls */}
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {(packageForm.includes && packageForm.includes.length > 0) ? (
+                    packageForm.includes.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-2 text-xs"
+                      >
+                        {editingIncludeIndex === index ? (
+                          /* Inline Editing Mode */
+                          <div className="flex items-center gap-2 flex-1">
+                            <input
+                              type="text"
+                              value={editingIncludeText}
+                              onChange={(e) => setEditingIncludeText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleSaveEditInclude(index);
+                                } else if (e.key === 'Escape') {
+                                  handleCancelEditInclude();
+                                }
+                              }}
+                              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-amber-400 focus:outline-none bg-amber-50/40"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditInclude(index)}
+                              className="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-[11px] hover:bg-emerald-700 transition"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditInclude}
+                              className="bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg font-bold text-[11px] hover:bg-slate-200 transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          /* View Mode with Edit & Delete icons */
+                          <>
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                {index + 1}
+                              </span>
+                              <span className="text-slate-800 font-medium leading-relaxed">
+                                {item}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditInclude(index)}
+                                className="p-1.5 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition"
+                                title="Edit this item"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteIncludeItem(index)}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                title="Delete this item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 bg-white/60 rounded-xl border border-dashed border-slate-300">
+                      <p className="text-xs text-slate-400">No inclusion items in the list. Use the field above to add bullets.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Recommended For */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Recommended For (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={packageForm.recommendedFor || ''}
+                  onChange={(e) => setPackageForm(prev => ({ ...prev, recommendedFor: e.target.value }))}
+                  placeholder="e.g. Birthdays, Kids Parties, Office Get-togethers"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPackageModalOpen(false)}
+                  className="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs transition shadow-md flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Package to D1</span>
+                </button>
+              </div>
+
             </form>
           </div>
         </div>

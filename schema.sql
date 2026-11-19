@@ -120,6 +120,22 @@ CREATE TABLE IF NOT EXISTS party_orders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 6b. Curated Celebration Packages Table (Dynamic Admin Package Customization)
+CREATE TABLE IF NOT EXISTS party_packages (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    tagline TEXT NOT NULL,
+    min_guests INTEGER DEFAULT 10,
+    price REAL NOT NULL,
+    price_type TEXT DEFAULT 'per_plate', -- 'per_plate' or 'fixed'
+    badge TEXT,
+    image TEXT NOT NULL,
+    includes_json TEXT NOT NULL,
+    recommended_for TEXT,
+    popular_items_json TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 7. Registered Users & Admins
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
