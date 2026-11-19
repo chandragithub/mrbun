@@ -2896,7 +2896,7 @@ export const AdminPage: React.FC = () => {
                   className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs transition shadow-md flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Save Package to D1</span>
+                  <span>Save</span>
                 </button>
               </div>
 
