@@ -72,6 +72,22 @@ CREATE TABLE IF NOT EXISTS party_orders (
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS franchise_applications (
+    id TEXT PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT,
+    city TEXT NOT NULL,
+    state TEXT,
+    model_interested TEXT NOT NULL,
+    investment_budget TEXT,
+    has_property TEXT,
+    property_area TEXT,
+    prior_experience TEXT,
+    status TEXT DEFAULT 'new_inquiry',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
     id TEXT PRIMARY KEY,
     customer_name TEXT NOT NULL,

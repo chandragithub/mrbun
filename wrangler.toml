@@ -1,15 +1,21 @@
-name = "mrbun-fast-food"
+name = "mrbun"
+main = "worker/index.ts"
 compatibility_date = "2024-04-01"
-pages_build_output_dir = "./dist"
+
+# Serve Vite React build assets with SPA fallback
+[assets]
+directory = "./dist"
+binding = "ASSETS"
 
 # Cloudflare D1 Database Binding for SQLite
 [[d1_databases]]
 binding = "DB"
-database_name = "mrbun-db"
-database_id = "your-d1-database-id-here"
+database_name = "mrbun"
+database_id = "0b367436-034c-462f-8811-c1ac76ea2023"
 
 [vars]
 COMPANY_NAME = "Mr Bun"
 CONTACT_PHONE = "9476088111"
 CONTACT_EMAIL = "contact@mrbun.in"
 FSSAI_LICENSE = "22926112000173"
+WORKERS_DEV_DOMAIN = "mrbun.ceansystech.workers.dev"
