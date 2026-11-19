@@ -6,10 +6,11 @@ compatibility_date = "2024-04-01"
 [build]
 command = "npm run build"
 
-# Serve Vite React build assets with SPA fallback
+# Serve Vite React build assets with native Cloudflare SPA fallback
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 # Cloudflare D1 Database Binding for SQLite
 [[d1_databases]]
