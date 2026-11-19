@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 interface CartDrawerProps {
   onProceedToCheckout: () => void;
@@ -37,6 +38,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
     setDeliveryType
   } = useCart();
 
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [inputCoupon, setInputCoupon] = useState('');
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
@@ -313,11 +315,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
               <button
                 onClick={() => {
                   setIsCartOpen(false);
-                  onProceedToCheckout();
+                  if (!isAuthenticated) {
+                    openAuthModal('login');
+                  } else {
+                    onProceedToCheckout();
+                  }
                 }}
                 className="w-full flex items-center justify-between bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold p-3.5 rounded-xl shadow-lg shadow-amber-500/25 transition transform active:scale-98"
               >
-                <span>Proceed to Checkout</span>
+                <span>{isAuthenticated ? 'Proceed to Checkout' : 'Login & Checkout'}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-black">₹{totalAmount}</span>
                   <ArrowRight className="w-4 h-4" />

@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, MapPin, Receipt, PartyPopper, RefreshCw, ArrowRight, ShieldCheck, Phone, ShoppingBag } from 'lucide-react';
+import { 
+  Clock, 
+  MapPin, 
+  Receipt, 
+  PartyPopper, 
+  RefreshCw, 
+  ArrowRight, 
+  ShieldCheck, 
+  Phone, 
+  ShoppingBag, 
+  CheckCircle2, 
+  Mail, 
+  AlertTriangle 
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/db';
 import { Order, PartyOrderBooking } from '../types';
@@ -79,21 +92,32 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
           </p>
         </div>
 
-        <button
-          onClick={() => navigate('/menu')}
-          className="text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl transition shadow-sm"
-        >
-          Order More Food
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadData}
+            className="p-2 bg-white hover:bg-amber-50 text-slate-600 border border-slate-200 rounded-xl transition flex items-center gap-1.5 text-xs font-bold"
+            title="Refresh Orders"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/menu')}
+            className="text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl transition shadow-xs"
+          >
+            Order More Food
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 bg-white rounded-2xl shadow-sm p-1.5 gap-2 max-w-md text-xs font-bold">
+      <div className="flex border-b border-slate-200 bg-white rounded-2xl shadow-xs p-1.5 gap-2 max-w-md text-xs font-bold">
         <button
           onClick={() => setActiveTab('orders')}
           className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
             activeTab === 'orders'
-              ? 'bg-amber-500 text-white shadow-sm'
+              ? 'bg-amber-500 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -105,19 +129,19 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
           onClick={() => setActiveTab('parties')}
           className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
             activeTab === 'parties'
-              ? 'bg-red-600 text-white shadow-sm'
+              ? 'bg-amber-500 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <PartyPopper className="w-4 h-4" />
-          <span>Party Bookings ({partyBookings.length})</span>
+          <span>Party Feasts ({partyBookings.length})</span>
         </button>
       </div>
 
       {/* Content */}
       {activeTab === 'orders' ? (
         orders.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-amber-100 shadow-sm space-y-3">
+          <div className="text-center py-16 bg-white rounded-3xl border border-amber-100 shadow-xs space-y-3">
             <p className="text-5xl">🍔</p>
             <h3 className="text-lg font-bold text-slate-800">You haven't placed an order yet!</h3>
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
@@ -135,27 +159,65 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
             {orders.map((ord) => (
               <div
                 key={ord.id}
-                className="bg-white rounded-3xl p-5 sm:p-6 border border-amber-100 shadow-sm hover:shadow-md transition space-y-4"
+                className={`bg-white rounded-3xl p-5 sm:p-6 border transition space-y-4 shadow-xs ${
+                  ord.orderStatus === 'pending'
+                    ? 'border-2 border-amber-400 bg-amber-50/20'
+                    : 'border-amber-100'
+                }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <span className="font-mono font-bold text-xs bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg">
-                      {ord.id}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg">
+                        {ord.id}
+                      </span>
+                      <span className="text-[10px] uppercase font-bold text-slate-500">
+                        {ord.paymentMethod.toUpperCase()} ({ord.paymentStatus === 'paid' ? 'Paid Online' : 'Cash before prep'})
+                      </span>
+                    </div>
                     <p className="text-[11px] text-slate-400 mt-1">
                       {new Date(ord.createdAt).toLocaleString()}
                     </p>
                   </div>
 
                   <div className="text-right">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-amber-500 text-white shadow-sm">
-                      {ord.orderStatus.replace(/_/g, ' ')}
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase shadow-xs ${
+                      ord.orderStatus === 'pending'
+                        ? 'bg-amber-500 text-white animate-pulse'
+                        : ord.orderStatus === 'confirmed'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-800 text-white'
+                    }`}>
+                      {ord.orderStatus === 'pending' ? '⏳ Pending Owner Approval' : ord.orderStatus === 'confirmed' ? '✅ Confirmed by Owner' : ord.orderStatus.replace(/_/g, ' ')}
                     </span>
                     <p className="text-lg font-black text-amber-950 mt-1 font-display">
                       ₹{ord.totalAmount}
                     </p>
                   </div>
                 </div>
+
+                {/* Workflow Status Explanation */}
+                {ord.orderStatus === 'pending' ? (
+                  <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-xs text-amber-950 flex items-start gap-2.5">
+                    <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold">Awaiting Owner Approval &amp; Verification</p>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Order details have been dispatched to Owner Phone (9476088111) &amp; Email (contact@mrbun.in). As soon as the owner approves, your status will change to <strong>Confirmed</strong> and you will receive confirmation SMS!
+                      </p>
+                    </div>
+                  </div>
+                ) : ord.orderStatus === 'confirmed' ? (
+                  <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold">Order Approved by Owner!</p>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Confirmation message sent to your mobile ({ord.customerPhone}) &amp; email ({ord.customerEmail}). Kitchen staff is preparing your hot meal.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Items */}
                 <div className="space-y-1.5 text-xs text-slate-600">
@@ -180,9 +242,9 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
 
                   <button
                     onClick={() => onTrackOrder(ord)}
-                    className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center justify-center gap-1.5 shadow"
+                    className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
                   >
-                    <span>Track Live Delivery</span>
+                    <span>Track Live Delivery &amp; Messages</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -192,7 +254,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
         )
       ) : (
         partyBookings.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-red-100 shadow-sm space-y-3">
+          <div className="text-center py-16 bg-white rounded-3xl border border-red-100 shadow-xs space-y-3">
             <p className="text-5xl">🎉</p>
             <h3 className="text-lg font-bold text-slate-800">No party bookings registered yet</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -211,7 +273,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
             {partyBookings.map((pt) => (
               <div
                 key={pt.id}
-                className="bg-white rounded-3xl p-5 sm:p-6 border border-red-100 shadow-sm space-y-4"
+                className="bg-white rounded-3xl p-5 sm:p-6 border border-red-100 shadow-xs space-y-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-50 pb-3">
                   <div>
@@ -224,8 +286,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
                   </div>
 
                   <div className="text-right">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800">
-                      {pt.status.replace(/_/g, ' ')}
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase shadow-xs ${
+                      pt.status === 'pending'
+                        ? 'bg-amber-500 text-white animate-pulse'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {pt.status === 'pending' ? '⏳ Pending Owner Approval' : pt.status.replace(/_/g, ' ')}
                     </span>
                     <p className="text-lg font-black text-red-700 mt-1 font-display">
                       ₹{pt.budgetEstimate.toLocaleString()}
@@ -237,6 +303,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
                   <p><strong>Package:</strong> {pt.packageName}</p>
                   <p><strong>Date &amp; Time:</strong> {pt.eventDate} @ {pt.eventTime}</p>
                   <p><strong>Venue Address:</strong> {pt.venueAddress}</p>
+                  <p><strong>Payment Mode:</strong> {pt.paymentMethod ? pt.paymentMethod.toUpperCase() : 'ONLINE'}</p>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
@@ -246,7 +313,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
                     className="text-emerald-700 font-bold hover:underline flex items-center gap-1"
                   >
                     <Phone className="w-3.5 h-3.5" />
-                    <span>Call Catering Manager</span>
+                    <span>Call Owner / Catering Manager</span>
                   </a>
                 </div>
               </div>
@@ -258,5 +325,4 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
     </div>
   );
 };
-
 export default OrdersPage;

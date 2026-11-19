@@ -45,7 +45,15 @@ export interface User {
   role: 'customer' | 'admin';
 }
 
-export type OrderStatus = 'received' | 'preparing' | 'baking' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'baking' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'received';
+
+export interface NotificationDispatch {
+  sentToPhone: string;
+  sentToEmail: string;
+  dispatchedAt: string;
+  message: string;
+  type: 'order_placed_to_owner' | 'owner_approved_to_customer';
+}
 
 export interface Order {
   id: string;
@@ -68,6 +76,10 @@ export interface Order {
   fssaiLicense: string;
   createdAt: string;
   estimatedDeliveryTime?: string;
+  adminNotification?: NotificationDispatch;
+  customerConfirmation?: NotificationDispatch;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface PartyPackage {
@@ -98,6 +110,12 @@ export interface PartyOrderBooking {
   packageName?: string;
   customNotes?: string;
   budgetEstimate: number;
-  status: 'inquiry_received' | 'confirmed' | 'catering_scheduled' | 'completed';
+  paymentMethod?: 'online' | 'upi' | 'cash_before_prep';
+  paymentStatus?: 'pending' | 'paid';
+  status: 'pending' | 'confirmed' | 'catering_scheduled' | 'inquiry_received' | 'completed' | 'cancelled';
   createdAt: string;
+  adminNotification?: NotificationDispatch;
+  customerConfirmation?: NotificationDispatch;
+  approvedAt?: string;
+  approvedBy?: string;
 }

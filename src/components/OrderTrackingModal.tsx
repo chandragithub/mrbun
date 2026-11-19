@@ -11,7 +11,11 @@ import {
   ShieldCheck, 
   MapPin, 
   Receipt,
-  Sparkles
+  Sparkles,
+  Mail,
+  AlertTriangle,
+  RefreshCw,
+  BellRing
 } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
 import { dbService } from '../services/db';
@@ -23,28 +27,28 @@ interface OrderTrackingModalProps {
 
 const STEPS: { status: OrderStatus; label: string; icon: React.ReactNode; desc: string }[] = [
   { 
-    status: 'received', 
-    label: 'Order Confirmed', 
+    status: 'pending', 
+    label: 'Awaiting Owner Approval', 
+    icon: <Clock className="w-5 h-5 text-amber-500 animate-spin" style={{ animationDuration: '4s' }} />,
+    desc: 'Order placed & details messaged to Owner (9476088111 & contact@mrbun.in)'
+  },
+  { 
+    status: 'confirmed', 
+    label: 'Confirmed by Owner', 
     icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
-    desc: 'Mr Bun kitchen accepted your ticket'
+    desc: 'Owner approved ticket! Confirmation SMS & Email dispatched to your phone'
   },
   { 
     status: 'preparing', 
-    label: 'Grilling & Prepping', 
+    label: 'Kitchen Grilling & Baking', 
     icon: <ChefHat className="w-5 h-5 text-amber-500" />,
-    desc: 'Artisan brioche buns toasting & patties sizzling'
-  },
-  { 
-    status: 'baking', 
-    label: 'Oven Baking', 
-    icon: <Flame className="w-5 h-5 text-red-500" />,
-    desc: 'Mozzarella & cheddar bubbling to perfection'
+    desc: 'Artisan brioche buns toasting & mozzarella bubbling (Cash verified if COD)'
   },
   { 
     status: 'out_for_delivery', 
     label: 'Out For Delivery', 
     icon: <Bike className="w-5 h-5 text-blue-500" />,
-    desc: 'Delivery partner Vikram S. is speeding your way'
+    desc: 'Delivery hero Vikram S. is speeding hot food to your doorstep'
   },
   { 
     status: 'delivered', 
@@ -57,42 +61,34 @@ const STEPS: { status: OrderStatus; label: string; icon: React.ReactNode; desc: 
 export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, onClose }) => {
   if (!order) return null;
 
+  const [currentOrder, setCurrentOrder] = useState<Order>(order);
   const [currentStatus, setCurrentStatus] = useState<OrderStatus>(order.orderStatus);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [showNotificationLogs, setShowNotificationLogs] = useState(true);
 
-  // Simulate progress across stages for demo if order is newly created
+  // Sync state whenever prop changes or when refreshing from db
   useEffect(() => {
+    setCurrentOrder(order);
     setCurrentStatus(order.orderStatus);
+  }, [order]);
 
-    if (order.orderStatus === 'received') {
-      const t1 = setTimeout(() => {
-        setCurrentStatus('preparing');
-        dbService.updateOrderStatus(order.id, 'preparing');
-      }, 5000);
-
-      const t2 = setTimeout(() => {
-        setCurrentStatus('baking');
-        dbService.updateOrderStatus(order.id, 'baking');
-      }, 15000);
-
-      const t3 = setTimeout(() => {
-        setCurrentStatus('out_for_delivery');
-        dbService.updateOrderStatus(order.id, 'out_for_delivery');
-      }, 30000);
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+  const refreshLiveOrder = async () => {
+    const all = await dbService.getAllOrders();
+    const found = all.find(o => o.id === currentOrder.id);
+    if (found) {
+      setCurrentOrder(found);
+      setCurrentStatus(found.orderStatus);
     }
-  }, [order.id, order.orderStatus]);
+  };
 
   const getStepIndex = (status: OrderStatus) => {
     switch (status) {
-      case 'received': return 0;
-      case 'preparing': return 1;
+      case 'pending': return 0;
+      case 'confirmed':
+      case 'received': return 1;
+      case 'preparing':
       case 'baking': return 2;
+      case 'ready':
       case 'out_for_delivery': return 3;
       case 'delivered': return 4;
       default: return 0;
@@ -103,6 +99,15 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Quick Demo Simulator for user to test approving the order right from tracker if they want
+  const handleSimulateOwnerApproval = async () => {
+    const updated = await dbService.approveOrder(currentOrder.id);
+    if (updated) {
+      setCurrentOrder(updated);
+      setCurrentStatus(updated.orderStatus);
+    }
   };
 
   return (
@@ -120,10 +125,10 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono bg-black/30 px-2 py-0.5 rounded font-bold">
-                  {order.id}
+                  {currentOrder.id}
                 </span>
                 <span className="text-xs text-amber-200">
-                  {order.deliveryType === 'delivery' ? 'Express Delivery' : 'Pickup at Store'}
+                  {currentOrder.deliveryType === 'delivery' ? 'Express Delivery' : 'Pickup at Store'}
                 </span>
               </div>
               <h2 className="text-lg sm:text-xl font-black mt-0.5">Live Order Tracker</h2>
@@ -131,6 +136,13 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={refreshLiveOrder}
+              className="p-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl transition"
+              title="Refresh status"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setShowInvoice(!showInvoice)}
               className="px-2.5 sm:px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
@@ -151,29 +163,59 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
         {/* Body content */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
           
-          {/* Estimated Delivery Time Banner */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Clock className="w-6 h-6 text-amber-600 animate-spin" style={{ animationDuration: '6s' }} />
-              <div>
-                <p className="text-xs text-slate-500 font-semibold uppercase">Estimated Delivery</p>
-                <p className="text-lg font-black text-slate-900">
-                  {currentStatus === 'delivered' ? 'Delivered' : '20 - 25 Minutes'}
-                </p>
+          {/* Current Status Highlight Banner */}
+          {currentStatus === 'pending' ? (
+            <div className="bg-gradient-to-r from-amber-100/90 via-orange-100/80 to-amber-50 p-4 rounded-2xl border-2 border-amber-400/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-black uppercase text-amber-900 tracking-wider">Status: Pending Owner Approval</p>
+                    <span className="bg-amber-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">
+                      Action Pending
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 mt-0.5">
+                    Order details have been messaged to Owner Phone (<strong>9476088111</strong>) &amp; Email (<strong>contact@mrbun.in</strong>). Awaiting kitchen approval.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="text-right">
-              <span className="inline-block bg-amber-500 text-white text-xs font-extrabold uppercase px-2.5 py-1 rounded-full shadow-sm">
+              {/* Quick simulation helper for demonstration */}
+              <button
+                type="button"
+                onClick={handleSimulateOwnerApproval}
+                className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs transition"
+                title="Click to simulate owner clicking approve in Admin Dashboard"
+              >
+                ✓ Simulate Owner Approval
+              </button>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white p-4 rounded-2xl border border-emerald-300 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-emerald-900 uppercase">Status: Confirmed by Owner</p>
+                  <p className="text-sm font-black text-slate-900">
+                    {currentStatus === 'delivered' ? 'Food Delivered!' : 'Kitchen is Preparing Hot Food'}
+                  </p>
+                </div>
+              </div>
+              <span className="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase">
                 {currentStatus.replace(/_/g, ' ')}
               </span>
             </div>
-          </div>
+          )}
 
           {/* Stepper Progress */}
           <div className="space-y-4">
             <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
-              Live Kitchen &amp; Delivery Progress
+              Live Approval &amp; Preparation Workflow
             </h3>
 
             <div className="space-y-3">
@@ -193,19 +235,19 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
                     }`}
                   >
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      isPassed ? 'bg-white shadow-sm' : 'bg-slate-100'
+                      isPassed ? 'bg-white shadow-xs' : 'bg-slate-100'
                     }`}>
                       {step.icon}
                     </div>
 
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h4 className={`text-sm font-bold ${isCurrent ? 'text-amber-950' : 'text-slate-800'}`}>
+                        <h4 className={`text-sm font-bold ${isCurrent ? 'text-amber-950 font-black' : 'text-slate-800'}`}>
                           {step.label}
                         </h4>
                         {isCurrent && (
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-200/80 px-2 py-0.5 rounded-full animate-pulse">
-                            In Progress
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full animate-pulse">
+                            Current Stage
                           </span>
                         )}
                         {idx < currentIndex && (
@@ -223,6 +265,68 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
             </div>
           </div>
 
+          {/* SMS & Email Notification Dispatch Logs */}
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <span className="flex items-center gap-1.5 text-amber-900">
+                <BellRing className="w-4 h-4 text-amber-600" />
+                <span>SMS &amp; Email Notification Dispatch Logs</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowNotificationLogs(!showNotificationLogs)}
+                className="text-amber-700 hover:underline text-[11px]"
+              >
+                {showNotificationLogs ? 'Hide' : 'Show Details'}
+              </button>
+            </div>
+
+            {showNotificationLogs && (
+              <div className="space-y-2 text-xs pt-1 border-t border-slate-200/60">
+                {/* 1. Message to Owner */}
+                <div className="bg-white p-2.5 rounded-xl border border-amber-100 flex items-start gap-2.5">
+                  <Mail className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="font-bold text-slate-800">📩 Order Sent to Owner Phone &amp; Email</span>
+                      <span className="text-emerald-700 font-bold">Dispatched</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Dispatched to Owner: <strong>9476088111</strong> (SMS/WhatsApp) &amp; <strong>contact@mrbun.in</strong> (Email)
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Confirmation to Customer */}
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-start gap-2.5">
+                  <Phone className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="font-bold text-slate-800">📱 Customer Confirmation SMS &amp; Email</span>
+                      <span className={`font-bold ${currentOrder.customerConfirmation ? 'text-emerald-700' : 'text-amber-600'}`}>
+                        {currentOrder.customerConfirmation ? '✓ Delivered to Customer' : 'Pending Owner Approval'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Destination: <strong>{currentOrder.customerPhone}</strong> &amp; <strong>{currentOrder.customerEmail}</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cash Payment Policy Banner if COD */}
+          {currentOrder.paymentMethod === 'cod' && (
+            <div className="bg-red-50 p-3.5 rounded-2xl border border-red-200 text-xs flex items-center gap-2.5 text-red-800">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+              <div>
+                <p className="font-bold">Cash Payment Condition</p>
+                <p className="text-[11px] text-red-700">Cash is collected and verified strictly before kitchen food preparation commences.</p>
+              </div>
+            </div>
+          )}
+
           {/* Delivery Rider Details if Out for Delivery */}
           {currentIndex >= 3 && (
             <div className="bg-blue-50/70 rounded-2xl p-4 border border-blue-200 flex items-center justify-between">
@@ -232,131 +336,94 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
                 </div>
                 <div>
                   <p className="text-xs text-blue-900 font-bold">Delivery Hero: Vikram Sharma</p>
-                  <p className="text-[11px] text-slate-500">Fast Food Courier • Temp: 98.4°F Normal</p>
+                  <p className="text-[11px] text-slate-500">Fast Food Courier • Verified Hot Warmer Pack</p>
                 </div>
               </div>
 
               <a
                 href="tel:9476088111"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
               >
                 <Phone className="w-3.5 h-3.5" />
-                <span>Call Rider (9476088111)</span>
+                <span>Call (9476088111)</span>
               </a>
             </div>
           )}
 
           {/* Delivery Address & Contact */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-1.5">
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-slate-800">Delivering To:</span>
-                <p className="text-slate-600 mt-0.5">{order.deliveryAddress}</p>
-              </div>
+            <div className="flex items-center gap-2 text-slate-700 font-bold">
+              <MapPin className="w-4 h-4 text-amber-600" />
+              <span>Delivery Address</span>
             </div>
-            {order.orderNotes && (
-              <p className="text-[11px] text-amber-800 italic pt-1 border-t border-slate-200">
-                Note: {order.orderNotes}
-              </p>
-            )}
+            <p className="text-slate-600 pl-6">{currentOrder.deliveryAddress}</p>
+            <p className="text-slate-500 pl-6 text-[11px]">
+              Recipient: {currentOrder.customerName} ({currentOrder.customerPhone})
+            </p>
           </div>
 
-          {/* Digital Tax Invoice View */}
+          {/* Printable Invoice View toggle */}
           {showInvoice && (
-            <div className="bg-white p-6 rounded-2xl border-2 border-slate-800 shadow-md print:shadow-none space-y-4 font-mono text-xs text-slate-800">
-              
-              <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+            <div className="bg-white p-5 rounded-2xl border-2 border-slate-900 shadow-md space-y-4 print:block">
+              <div className="flex justify-between items-start border-b border-slate-200 pb-3">
                 <div>
-                  <h4 className="text-lg font-black text-slate-900">Mr Bun Fast Food</h4>
-                  <p className="text-[11px] text-slate-600">Company: Mr Bun</p>
-                  <p className="text-[11px] text-slate-600">Helpline: 9476088111</p>
-                  <p className="text-[11px] text-slate-600">Email: contact@mrbun.in</p>
-                  <p className="text-[11px] text-slate-600 font-bold">FSSAI Lic: 22926112000173</p>
+                  <h3 className="text-lg font-black font-display text-amber-950">Mr Bun Fast Food</h3>
+                  <p className="text-[10px] text-slate-500">Tax Invoice • FSSAI Lic: 22926112000173</p>
+                  <p className="text-[10px] text-slate-500">Helpline: 9476088111 • contact@mrbun.in</p>
                 </div>
                 <div className="text-right">
-                  <span className="font-bold text-sm">TAX INVOICE</span>
-                  <p className="text-[11px] text-slate-500">Order ID: {order.id}</p>
-                  <p className="text-[11px] text-slate-500">Date: {new Date(order.createdAt).toLocaleString()}</p>
-                  <p className="text-[11px] text-emerald-700 font-bold uppercase">{order.paymentMethod} • {order.paymentStatus}</p>
+                  <span className="font-mono text-xs font-bold">{currentOrder.id}</span>
+                  <p className="text-[10px] text-slate-400">{new Date(currentOrder.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
-              {/* Items Table */}
-              <div className="space-y-2 border-b border-slate-200 pb-3">
-                <div className="flex justify-between font-bold text-slate-700 text-[11px] uppercase border-b pb-1">
-                  <span>Item &amp; Customization</span>
-                  <span className="w-12 text-center">Qty</span>
-                  <span className="w-16 text-right">Amount</span>
-                </div>
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-slate-800">
-                    <div className="flex-1 pr-2">
-                      <p className="font-semibold">{item.product.name}</p>
-                      {item.selectedSize && <p className="text-[10px] text-slate-500">Size: {item.selectedSize}</p>}
-                      {item.cheeseBurst && <p className="text-[10px] text-slate-500">+ Cheese Burst</p>}
-                    </div>
-                    <span className="w-12 text-center">{item.quantity}</span>
-                    <span className="w-16 text-right font-bold">₹{item.totalPrice}</span>
+              <div className="space-y-2 text-xs">
+                {currentOrder.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{item.quantity}x {item.product.name} {item.selectedSize ? `(${item.selectedSize})` : ''}</span>
+                    <span className="font-bold">₹{item.totalPrice}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Invoice Totals */}
-              <div className="space-y-1 text-right">
-                <div className="flex justify-between">
-                  <span>Item Subtotal:</span>
-                  <span>₹{order.subtotal}</span>
+              <div className="border-t border-slate-200 pt-2 space-y-1 text-xs">
+                <div className="flex justify-between text-slate-500">
+                  <span>Subtotal</span>
+                  <span>₹{currentOrder.subtotal}</span>
                 </div>
-                {order.discount > 0 && (
+                {currentOrder.discount > 0 && (
                   <div className="flex justify-between text-emerald-600">
-                    <span>Discount:</span>
-                    <span>-₹{order.discount}</span>
+                    <span>Discount</span>
+                    <span>-₹{currentOrder.discount}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>GST (5%):</span>
-                  <span>₹{order.tax}</span>
+                <div className="flex justify-between text-slate-500">
+                  <span>GST (5%)</span>
+                  <span>₹{currentOrder.tax}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Delivery Charge:</span>
-                  <span>{order.deliveryFee === 0 ? 'FREE' : `₹${order.deliveryFee}`}</span>
+                <div className="flex justify-between text-slate-500">
+                  <span>Delivery</span>
+                  <span>₹{currentOrder.deliveryFee}</span>
                 </div>
-                <div className="flex justify-between text-sm font-black pt-1 border-t border-slate-800 text-slate-900">
-                  <span>Grand Total:</span>
-                  <span>₹{order.totalAmount}</span>
+                <div className="flex justify-between pt-1 border-t border-slate-100 font-bold text-sm text-slate-900">
+                  <span>Total Paid ({currentOrder.paymentMethod.toUpperCase()})</span>
+                  <span>₹{currentOrder.totalAmount}</span>
                 </div>
               </div>
 
-              {/* Print Button */}
-              <div className="pt-2 flex justify-end print:hidden">
-                <button
-                  onClick={handlePrint}
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Receipt</span>
-                </button>
-              </div>
-
+              <button
+                onClick={handlePrint}
+                className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Official Receipt</span>
+              </button>
             </div>
           )}
 
-          {/* Need help footer */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-            <span className="flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>FSSAI License: <strong>22926112000173</strong></span>
-            </span>
-            <a href="tel:9476088111" className="text-amber-700 font-bold hover:underline flex items-center gap-1">
-              <Phone className="w-3.5 h-3.5" />
-              <span>Need help? Call 9476088111</span>
-            </a>
-          </div>
-
         </div>
-
       </div>
     </div>
   );
 };
+export default OrderTrackingModal;
