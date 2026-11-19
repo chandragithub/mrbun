@@ -12,6 +12,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { AuthModal } from './components/AuthModal';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { Order, Product } from './types';
 
 // Lazy loaded page components
@@ -134,6 +135,9 @@ export const MainApp: React.FC = () => {
 
       {/* Mobile Sticky Bottom Navigation Bar (app-like experience) */}
       <MobileBottomNav />
+
+      {/* Floating Animated Scroll to Top Button */}
+      <ScrollToTopButton />
 
       {/* Global Modals & Drawers */}
       <ProductCustomizerModal
