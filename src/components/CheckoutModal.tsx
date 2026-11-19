@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { dbService } from '../services/db';
 import { Order } from '../types';
 
@@ -31,6 +32,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onOrderSuccess
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { settings } = useSettings();
   const {
     items,
     subtotal,
@@ -42,13 +44,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     clearCart
   } = useCart();
 
+  const paymentOpts = settings.paymentOptions || {
+    cashEnabled: true,
+    cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
+    upiEnabled: true,
+    upiId: 'mrbun@upi',
+    upiName: 'Mr Bun Fast Food Central',
+    cardEnabled: true,
+    cardGateway: 'cashfree',
+    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    isTestMode: false
+  };
+
+  const defaultMethod = paymentOpts.upiEnabled ? 'upi' : (paymentOpts.cardEnabled ? 'card' : 'cod');
+
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [email, setEmail] = useState(user?.email || '');
   const [address, setAddress] = useState(user?.address || '');
   const [landmark, setLandmark] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'cod'>('upi');
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'cod'>(defaultMethod);
   const [isPlacing, setIsPlacing] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
@@ -366,101 +382,115 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 
                 {/* UPI Option */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('upi')}
-                  className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
-                    paymentMethod === 'upi'
-                      ? 'border-amber-500 bg-amber-50/90 ring-2 ring-amber-500/20'
-                      : 'border-slate-200 hover:border-amber-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <QrCode className="w-5 h-5 text-amber-600" />
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">Instant</span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs font-bold text-slate-900">UPI Online Pay</p>
-                    <p className="text-[10px] text-slate-500">GPay, PhonePe, Paytm</p>
-                  </div>
-                </button>
+                {paymentOpts.upiEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('upi')}
+                    className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
+                      paymentMethod === 'upi'
+                        ? 'border-amber-500 bg-amber-50/90 ring-2 ring-amber-500/20'
+                        : 'border-slate-200 hover:border-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <QrCode className="w-5 h-5 text-amber-600" />
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">Instant</span>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-xs font-bold text-slate-900">UPI Online Pay</p>
+                      <p className="text-[10px] text-slate-500">GPay, PhonePe, Paytm</p>
+                    </div>
+                  </button>
+                )}
 
                 {/* Card Option */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
-                    paymentMethod === 'card'
-                      ? 'border-amber-500 bg-amber-50/90 ring-2 ring-amber-500/20'
-                      : 'border-slate-200 hover:border-amber-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <CreditCard className="w-5 h-5 text-amber-600" />
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded">Cards</span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs font-bold text-slate-900">Credit / Debit Card</p>
-                    <p className="text-[10px] text-slate-500">Visa, Mastercard, RuPay</p>
-                  </div>
-                </button>
+                {paymentOpts.cardEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
+                      paymentMethod === 'card'
+                        ? 'border-amber-500 bg-amber-50/90 ring-2 ring-amber-500/20'
+                        : 'border-slate-200 hover:border-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <CreditCard className="w-5 h-5 text-amber-600" />
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded">
+                        {paymentOpts.cardGateway === 'cashfree' ? 'Cashfree' : 'Cards'}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-xs font-bold text-slate-900">
+                        {paymentOpts.cardGateway === 'cashfree' ? 'Cashfree Payments' : 'Card / NetBanking'}
+                      </p>
+                      <p className="text-[10px] text-slate-500">Visa, Mastercard, RuPay</p>
+                    </div>
+                  </button>
+                )}
 
                 {/* COD Option with Strict Cash Policy Notice */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('cod')}
-                  className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
-                    paymentMethod === 'cod'
-                      ? 'border-red-500 bg-red-50/70 ring-2 ring-red-500/20'
-                      : 'border-slate-200 hover:border-amber-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <Banknote className="w-5 h-5 text-red-600" />
-                    <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.2 rounded">Policy</span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs font-bold text-slate-900">Cash Payment</p>
-                    <p className="text-[10px] text-red-700 font-semibold">Pay before prep starts</p>
-                  </div>
-                </button>
+                {paymentOpts.cashEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cod')}
+                    className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
+                      paymentMethod === 'cod'
+                        ? 'border-red-500 bg-red-50/70 ring-2 ring-red-500/20'
+                        : 'border-slate-200 hover:border-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Banknote className="w-5 h-5 text-red-600" />
+                      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.2 rounded">Policy</span>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-xs font-bold text-slate-900">Cash Payment</p>
+                      <p className="text-[10px] text-red-700 font-semibold">Pay before prep starts</p>
+                    </div>
+                  </button>
+                )}
 
               </div>
 
               {/* UPI Simulated QR Code preview if UPI selected */}
-              {paymentMethod === 'upi' && (
+              {paymentMethod === 'upi' && paymentOpts.upiEnabled && (
                 <div className="mt-3 bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 flex items-center gap-3">
                   <div className="w-14 h-14 bg-white p-1 rounded-xl shadow-xs border border-amber-200 flex items-center justify-center shrink-0">
                     <QrCode className="w-10 h-10 text-amber-800" />
                   </div>
                   <div className="text-xs">
-                    <p className="font-bold text-slate-800">Mr Bun Instant Online UPI Verified</p>
-                    <p className="text-slate-500 text-[11px]">UPI ID: <span className="font-mono font-bold text-amber-900">mrbun@upi</span></p>
+                    <p className="font-bold text-slate-800">{paymentOpts.upiName || `${settings.brandName} Instant Online UPI`}</p>
+                    <p className="text-slate-500 text-[11px]">UPI ID: <span className="font-mono font-bold text-amber-900">{paymentOpts.upiId || 'mrbun@upi'}</span></p>
                     <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">✓ Instant owner alert upon payment confirmation</p>
                   </div>
                 </div>
               )}
 
               {/* Online Card preview */}
-              {paymentMethod === 'card' && (
+              {paymentMethod === 'card' && paymentOpts.cardEnabled && (
                 <div className="mt-3 bg-blue-50/80 p-3.5 rounded-2xl border border-blue-200 flex items-center gap-3">
                   <CreditCard className="w-8 h-8 text-blue-600 shrink-0" />
                   <div className="text-xs">
-                    <p className="font-bold text-slate-900">Secure Online 256-Bit SSL Payment</p>
-                    <p className="text-[11px] text-slate-500">Supports all major Indian Debit &amp; Credit Cards, NetBanking.</p>
+                    <p className="font-bold text-slate-900">
+                      {paymentOpts.cardGateway === 'cashfree' ? 'Secured by Cashfree Payments' : 'Secure Online 256-Bit SSL Payment'}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Supports all major Indian Debit &amp; Credit Cards, NetBanking{paymentOpts.isTestMode ? ' [Sandbox Test Mode Active]' : ''}.
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Strict Cash Policy Alert */}
-              {paymentMethod === 'cod' && (
+              {paymentMethod === 'cod' && paymentOpts.cashEnabled && (
                 <div className="mt-3 bg-red-50 p-3.5 rounded-2xl border-2 border-red-300 text-xs space-y-1 animate-in fade-in">
                   <div className="flex items-center gap-1.5 text-red-900 font-bold">
                     <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
                     <span>⚠️ Cash Payment Mandatory Policy</span>
                   </div>
                   <p className="text-[11px] text-red-800 leading-relaxed font-medium">
-                    Cash payment is accepted <strong>ONLY BEFORE food preparation begins</strong>. The counter staff or delivery rider will collect and verify cash prior to turning on kitchen grills and ovens.
+                    {paymentOpts.cashPolicyNotice || 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.'}
                   </p>
                 </div>
               )}

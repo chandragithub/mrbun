@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSettings } from '../context/SettingsContext';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -17,6 +18,7 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) => {
+  const { settings } = useSettings();
   return (
     <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-amber-50 via-orange-50/40 to-[#FFFDF7] pt-4 pb-10 sm:pt-8 sm:pb-16 lg:pt-14 lg:pb-24 border-b border-amber-100/60">
       
@@ -39,9 +41,9 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) =
 
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl xl:text-6xl font-black text-amber-950 tracking-tight leading-[1.15]">
-              Meet <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-orange-600 to-red-600">Mr Bun</span>! <br />
+              Meet <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-orange-600 to-red-600">{settings.brandName}</span>! <br />
               <span className="text-2xl sm:text-4xl xl:text-5xl font-extrabold text-slate-800">
-                Pizzas, Smash Burgers &amp; Cool Mocktails
+                {settings.tagline}
               </span>
             </h1>
 
@@ -62,7 +64,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) =
               </div>
               <div className="flex items-center gap-1.5 bg-white/90 border border-amber-200/80 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700 shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
-                <span>FSSAI Certified: 22926112000173</span>
+                <span>FSSAI Certified: {settings.fssaiLicense}</span>
               </div>
             </div>
 
@@ -89,10 +91,10 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) =
             <div className="flex items-center justify-center lg:justify-start gap-4 text-xs text-slate-600 pt-2">
               <span className="flex items-center gap-1.5">
                 <PhoneCall className="w-4 h-4 text-emerald-600" />
-                <span>Direct Hotline: <strong className="text-slate-900 font-bold">9476088111</strong></span>
+                <span>Direct Hotline: <strong className="text-slate-900 font-bold">{settings.phone}</strong></span>
               </span>
               <span>•</span>
-              <span>Email: <strong className="text-slate-900 font-bold">contact@mrbun.in</strong></span>
+              <span>Email: <strong className="text-slate-900 font-bold">{settings.email}</strong></span>
             </div>
 
           </div>
@@ -108,9 +110,10 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) =
               
               <div className="relative bg-white rounded-3xl p-5 shadow-2xl border-4 border-amber-300 transition-transform duration-500 group-hover:-translate-y-1">
                 <img 
-                  src="/logo.png" 
-                  alt="Mr Bun Mascot Character" 
+                  src={settings.logoUrl || '/logo.png'} 
+                  alt={`${settings.brandName} Logo`} 
                   className="w-full h-auto object-contain rounded-2xl animate-float"
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
                 />
 
                 {/* Floating Badge 1: Rating */}

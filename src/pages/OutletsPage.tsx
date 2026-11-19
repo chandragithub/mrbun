@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
+import { Outlet } from '../types';
 import { 
   MapPin, 
   Phone, 
@@ -15,22 +17,7 @@ import {
   UtensilsCrossed
 } from 'lucide-react';
 
-interface Outlet {
-  id: string;
-  name: string;
-  type: string;
-  address: string;
-  landmark: string;
-  phone: string;
-  timings: string;
-  status: 'Open Now' | 'Late Night Available';
-  image: string;
-  features: string[];
-  seatingCapacity?: string;
-  isFlagship?: boolean;
-}
-
-const OUTLETS: Outlet[] = [
+const FALLBACK_OUTLETS: Outlet[] = [
   {
     id: 'outlet-1',
     name: 'Mr Bun Flagship Diner & Central Kitchen',
@@ -75,6 +62,8 @@ const OUTLETS: Outlet[] = [
 
 export const OutletsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { outlets: contextOutlets, settings } = useSettings();
+  const displayOutlets = contextOutlets && contextOutlets.length > 0 ? contextOutlets : FALLBACK_OUTLETS;
 
   return (
     <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
@@ -85,7 +74,7 @@ export const OutletsPage: React.FC = () => {
           Find Us In Your City
         </span>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-          Mr Bun <span className="text-amber-600">Outlets &amp; Kitchens</span>
+          {settings.brandName} <span className="text-amber-600">Outlets &amp; Kitchens</span>
         </h1>
         <p className="text-slate-600 text-xs sm:text-sm">
           Visit our vibrant flagship diner for stone-baked pizzas and juicy smash burgers, or order takeaway from our express hubs!
@@ -94,7 +83,7 @@ export const OutletsPage: React.FC = () => {
 
       {/* Outlets List Cards */}
       <div className="space-y-8">
-        {OUTLETS.map((outlet) => (
+        {displayOutlets.map((outlet) => (
           <div
             key={outlet.id}
             className={`bg-white rounded-3xl overflow-hidden border transition-all duration-300 shadow-md hover:shadow-xl grid grid-cols-1 lg:grid-cols-12 ${

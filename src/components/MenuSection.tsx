@@ -3,6 +3,7 @@ import { Search, Flame, Sparkles, Filter } from 'lucide-react';
 import { CategoryType, Product } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { FoodCard } from './FoodCard';
+import { useSettings } from '../context/SettingsContext';
 
 interface MenuSectionProps {
   selectedCategory: CategoryType;
@@ -25,12 +26,15 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   onSelectCategory,
   onCustomizeProduct
 }) => {
+  const { products: contextProducts } = useSettings();
+  const availableProducts = contextProducts && contextProducts.length > 0 ? contextProducts : MENU_PRODUCTS;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [vegOnly, setVegOnly] = useState(false);
   const [nonVegOnly, setNonVegOnly] = useState(false);
 
   const filteredProducts = useMemo(() => {
-    return MENU_PRODUCTS.filter((product) => {
+    return availableProducts.filter((product) => {
       // Category match
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false;

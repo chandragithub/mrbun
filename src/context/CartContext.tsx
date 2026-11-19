@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product } from '../types';
+import { dbService } from '../services/db';
 
 interface CartContextType {
   items: CartItem[];
@@ -146,31 +147,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const applyCoupon = (code: string) => {
-    const normalized = code.trim().toUpperCase();
-    if (normalized === 'MRBUN50') {
-      if (subtotal < 299) {
-        return { success: false, message: 'MRBUN50 requires a minimum order of ₹299' };
-      }
-      setAppliedCoupon('MRBUN50');
-      setCouponFlatDiscount(50);
-      setCouponDiscountPercent(0);
-      return { success: true, message: 'Woohoo! ₹50 flat discount applied!' };
-    } else if (normalized === 'PARTY20') {
-      if (subtotal < 800) {
-        return { success: false, message: 'PARTY20 requires minimum order of ₹800' };
-      }
-      setAppliedCoupon('PARTY20');
-      setCouponDiscountPercent(20);
-      setCouponFlatDiscount(0);
-      return { success: true, message: 'Party Mode On! 20% discount applied!' };
-    } else if (normalized === 'FIRSTBITE') {
-      setAppliedCoupon('FIRSTBITE');
-      setCouponFlatDiscount(75);
-      setCouponDiscountPercent(0);
-      return { success: true, message: 'Welcome to Mr Bun! ₹75 discount applied!' };
-    } else {
-      return { success: false, message: 'Invalid coupon code. Try MRBUN50 or FIRSTBITE' };
+    const result = dbService.validateOffer(code, subtotal);
+    if (!result.success) {
+      return { success: false, message: result.message };
     }
+
+    setAppliedCoupon(code.trim().toUpperCase());
+    if (result.discountPercent > 0) {
+      setCouponDiscountPercent(result.discountPercent);
+      setCouponFlatDiscount(0);
+    } else {
+      setCouponFlatDiscount(result.discountAmount);
+      setCouponDiscountPercent(0);
+    }
+    return { success: true, message: result.message };
   };
 
   const removeCoupon = () => {

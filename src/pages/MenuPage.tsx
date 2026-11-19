@@ -4,6 +4,7 @@ import { Search, Flame, Sparkles, Filter, SlidersHorizontal } from 'lucide-react
 import { CategoryType, Product } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { FoodCard } from '../components/FoodCard';
+import { useSettings } from '../context/SettingsContext';
 
 interface MenuPageProps {
   onCustomizeProduct: (product: Product) => void;
@@ -20,6 +21,9 @@ const CATEGORIES: { id: CategoryType; name: string; icon: string }[] = [
 ];
 
 export const MenuPage: React.FC<MenuPageProps> = ({ onCustomizeProduct }) => {
+  const { products: contextProducts } = useSettings();
+  const availableProducts = contextProducts && contextProducts.length > 0 ? contextProducts : MENU_PRODUCTS;
+
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = (searchParams.get('category') as CategoryType) || 'all';
 
@@ -46,7 +50,7 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onCustomizeProduct }) => {
   };
 
   const filteredProducts = useMemo(() => {
-    return MENU_PRODUCTS.filter((product) => {
+    return availableProducts.filter((product) => {
       // Category match
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false;

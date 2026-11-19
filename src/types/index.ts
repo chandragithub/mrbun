@@ -119,3 +119,52 @@ export interface PartyOrderBooking {
   approvedAt?: string;
   approvedBy?: string;
 }
+
+export interface StorePaymentOptions {
+  cashEnabled: boolean;
+  cashPolicyNotice: string;
+  upiEnabled: boolean;
+  upiId: string;
+  upiName: string;
+  cardEnabled: boolean;
+  cardGateway: 'cashfree' | 'razorpay' | 'direct';
+  cashfreeAppId?: string;
+  isTestMode: boolean;
+}
+
+export interface StoreSettings {
+  brandName: string;
+  tagline: string;
+  logoUrl: string;
+  phone: string;
+  email: string;
+  fssaiLicense: string;
+  paymentOptions: StorePaymentOptions;
+}
+
+export interface StoreOffer {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  discountType: 'percentage' | 'flat'; // 'percentage' e.g. 20% OFF or 'flat' direct cash benefit e.g. ₹50 OFF
+  discountValue: number;
+  minOrderAmount: number;
+  maxDiscount?: number;
+  isActive: boolean;
+}
+
+export interface Outlet {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  landmark: string;
+  phone: string;
+  timings: string;
+  status: 'Open Now' | 'Late Night Available' | 'Coming Soon' | 'Renovating';
+  image: string;
+  features: string[];
+  seatingCapacity: string;
+  isFlagship?: boolean;
+}

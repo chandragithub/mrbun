@@ -21,10 +21,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSettings } from '../context/SettingsContext';
 
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const { totalItemsCount, setIsCartOpen } = useCart();
+  const { settings } = useSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
@@ -71,16 +73,16 @@ export const Header: React.FC = () => {
               <span className="flex items-center gap-1.5 shrink-0">
                 <Phone className="w-3.5 h-3.5 text-amber-200 shrink-0" />
                 <span className="hidden xs:inline">Order:</span>
-                <a href="tel:9476088111" className="font-bold underline hover:text-amber-200">9476088111</a>
+                <a href={`tel:${settings.phone}`} className="font-bold underline hover:text-amber-200">{settings.phone}</a>
               </span>
               <span className="hidden md:flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-amber-200 shrink-0" />
-                <a href="mailto:contact@mrbun.in" className="hover:text-amber-200">contact@mrbun.in</a>
+                <a href={`mailto:${settings.email}`} className="hover:text-amber-200">{settings.email}</a>
               </span>
               <span className="hidden xl:flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded-full">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
                 <span>FSSAI Lic:</span>
-                <span className="font-mono font-bold tracking-wide">22926112000173</span>
+                <span className="font-mono font-bold tracking-wide">{settings.fssaiLicense}</span>
               </span>
             </div>
 
@@ -104,28 +106,29 @@ export const Header: React.FC = () => {
             <Link 
               to="/" 
               className="flex items-center gap-2 sm:gap-3 group shrink-0 select-none py-1"
-              title="Mr Bun - Home"
+              title={`${settings.brandName} - Home`}
             >
               <div className="relative shrink-0 flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 lg:w-16 lg:h-16">
                 <img 
-                  src="/logo.png" 
-                  alt="Mr Bun Mascot Logo" 
+                  src={settings.logoUrl || '/logo.png'} 
+                  alt={`${settings.brandName} Logo`} 
                   className="w-full h-full object-contain drop-shadow-md rounded-xl transition-transform duration-200 group-hover:scale-105"
                   width="64"
                   height="64"
                   loading="eager"
+                  onError={(e) => {
+                    // Fallback to default logo if image url fails
+                    (e.target as HTMLImageElement).src = '/logo.png';
+                  }}
                 />
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
-                  HOT
-                </span>
               </div>
               
               <div className="flex flex-col justify-center">
                 <span className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-amber-950 font-display leading-none">
-                  Mr <span className="text-amber-600">Bun</span>
+                  {settings.brandName}
                 </span>
                 <p className="text-[9px] sm:text-[10px] md:text-[11px] font-bold text-amber-800/80 uppercase tracking-wider mt-0.5 hidden xs:block">
-                  Pizzas • Burgers • Mocktails
+                  {settings.tagline}
                 </p>
               </div>
             </Link>
@@ -282,9 +285,12 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-2.5">
                   <div className="relative w-11 h-11 shrink-0">
                     <img
-                      src="/logo.png"
-                      alt="Mr Bun"
+                      src={settings.logoUrl || '/logo.png'}
+                      alt={settings.brandName}
                       className="w-full h-full object-contain drop-shadow rounded-xl"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/logo.png';
+                      }}
                     />
                     <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
                       HOT
@@ -292,10 +298,10 @@ export const Header: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-xl font-black text-amber-950 font-display leading-none">
-                      Mr <span className="text-amber-600">Bun</span>
+                      {settings.brandName}
                     </span>
                     <p className="text-[10px] font-bold text-amber-800/80 uppercase tracking-wider mt-0.5">
-                      Fast Food &amp; Catering
+                      {settings.tagline}
                     </p>
                   </div>
                 </div>
@@ -446,7 +452,7 @@ export const Header: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-800 group-hover:text-amber-700 transition">Contact Us</p>
-                      <p className="text-[11px] text-slate-500">Helpline: 9476088111</p>
+                      <p className="text-[11px] text-slate-500">Helpline: {settings.phone}</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition" />
@@ -493,10 +499,10 @@ export const Header: React.FC = () => {
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span className="flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>FSSAI: <strong className="text-slate-800 font-mono">22926112000173</strong></span>
+                    <span>FSSAI: <strong className="text-slate-800 font-mono">{settings.fssaiLicense}</strong></span>
                   </span>
-                  <a href="tel:9476088111" className="font-bold text-amber-700 hover:underline">
-                    9476088111
+                  <a href={`tel:${settings.phone}`} className="font-bold text-amber-700 hover:underline">
+                    {settings.phone}
                   </a>
                 </div>
 

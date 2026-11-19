@@ -1,10 +1,120 @@
-import { Order, PartyOrderBooking, Product, User, NotificationDispatch } from '../types';
+import { 
+  Order, 
+  PartyOrderBooking, 
+  Product, 
+  User, 
+  NotificationDispatch,
+  StoreSettings,
+  StoreOffer,
+  Outlet
+} from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 
+const SETTINGS_STORAGE_KEY = 'mrbun_settings_v3';
+const PRODUCTS_STORAGE_KEY = 'mrbun_products_v3';
+const OFFERS_STORAGE_KEY = 'mrbun_offers_v3';
+const OUTLETS_STORAGE_KEY = 'mrbun_outlets_v3';
 const USERS_STORAGE_KEY = 'mrbun_users_db_v2';
 const ORDERS_STORAGE_KEY = 'mrbun_orders_db_v2';
 const PARTY_ORDERS_STORAGE_KEY = 'mrbun_party_orders_db_v2';
 const CURRENT_USER_KEY = 'mrbun_active_session_v2';
+
+export const DEFAULT_STORE_SETTINGS: StoreSettings = {
+  brandName: 'Mr Bun',
+  tagline: 'Pizzas • Burgers • Mocktails',
+  logoUrl: '/logo.png',
+  phone: '9476088111',
+  email: 'contact@mrbun.in',
+  fssaiLicense: '22926112000173',
+  paymentOptions: {
+    cashEnabled: true,
+    cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
+    upiEnabled: true,
+    upiId: 'mrbun@upi',
+    upiName: 'Mr Bun Fast Food Central',
+    cardEnabled: true,
+    cardGateway: 'cashfree',
+    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    isTestMode: false
+  }
+};
+
+export const INITIAL_OFFERS: StoreOffer[] = [
+  {
+    id: 'off-1',
+    code: 'MRBUN50',
+    title: 'Flat ₹50 Instant Cash Benefit',
+    description: 'Save ₹50 direct cash on orders above ₹299',
+    discountType: 'flat',
+    discountValue: 50,
+    minOrderAmount: 299,
+    isActive: true
+  },
+  {
+    id: 'off-2',
+    code: 'PARTY20',
+    title: '20% Mega Celebration Off',
+    description: 'Get 20% discount on party feasting orders above ₹800',
+    discountType: 'percentage',
+    discountValue: 20,
+    minOrderAmount: 800,
+    maxDiscount: 300,
+    isActive: true
+  },
+  {
+    id: 'off-3',
+    code: 'FIRSTBITE',
+    title: 'Flat ₹75 Welcome Bonus',
+    description: 'Direct cash discount on your first crave box above ₹350',
+    discountType: 'flat',
+    discountValue: 75,
+    minOrderAmount: 350,
+    isActive: true
+  }
+];
+
+export const INITIAL_OUTLETS: Outlet[] = [
+  {
+    id: 'outlet-1',
+    name: 'Mr Bun Flagship Diner & Central Kitchen',
+    type: 'Dine-In • Takeaway • Live Counter • Party Hall',
+    address: 'Plot 42, Food Court Boulevard, Central Plaza, Main Avenue',
+    landmark: 'Opposite City Center Mall, Near Apollo Fountain',
+    phone: '9476088111',
+    timings: '11:00 AM – 01:00 AM (All Days)',
+    status: 'Open Now',
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
+    features: ['65+ Seating Dine-in', 'Private Party Hall', 'Live Burger Grill', 'Free Wi-Fi', 'Valet Parking', 'Kids Play Zone'],
+    seatingCapacity: '65 Guests',
+    isFlagship: true
+  },
+  {
+    id: 'outlet-2',
+    name: 'Mr Bun Express - Cyber Tech Hub',
+    type: 'Express Lunch Boxes • Office Catering • Takeaway',
+    address: 'Tower B, Ground Floor, Global Cyber Tech Park, Sector 4',
+    landmark: 'Adjacent to Metro Gate 3',
+    phone: '9476088111',
+    timings: '10:30 AM – 11:30 PM (Mon – Sat)',
+    status: 'Open Now',
+    image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80',
+    features: ['Quick 5-min Pickup Counter', 'Corporate Bento Boxes', 'Drive-Thru Lane', 'Air Conditioned', 'Contactless UPI'],
+    seatingCapacity: '25 Quick Seats'
+  },
+  {
+    id: 'outlet-3',
+    name: 'Mr Bun Late Night Delivery Kitchen',
+    type: 'High-Speed Express Delivery • Midnight Cravings',
+    address: 'Shop 12, Metro Interchange Arcade, Railway Station Road',
+    landmark: 'Behind Central Post Office',
+    phone: '9476088111',
+    timings: '11:00 AM – 02:00 AM (Midnight Special)',
+    status: 'Late Night Available',
+    image: 'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=800&q=80',
+    features: ['Insulated Hot Warmer Depot', 'Superfast 25-min Radius', 'Late Night Burgers & Pizzas', 'Strict FSSAI Sanitization'],
+    seatingCapacity: 'Takeaway & Delivery Only'
+  }
+];
 
 // Pre-seeded initial users
 const INITIAL_USERS: User[] = [
@@ -26,9 +136,6 @@ const INITIAL_USERS: User[] = [
   }
 ];
 
-// Pre-seeded initial orders demonstrating the exact workflow:
-// 1. Pending (Awaiting Owner Approval)
-// 2. Confirmed (Approved by Owner, confirmation sent)
 const INITIAL_ORDERS: Order[] = [
   {
     id: 'ORD-91204',
@@ -41,7 +148,7 @@ const INITIAL_ORDERS: Order[] = [
     items: [
       {
         cartItemId: 'item-1',
-        product: MENU_PRODUCTS[0], // Mr Bun Brioche Smash Burger
+        product: MENU_PRODUCTS[0],
         quantity: 2,
         selectedSize: 'Double Patty Deluxe',
         cheeseBurst: true,
@@ -50,7 +157,7 @@ const INITIAL_ORDERS: Order[] = [
       },
       {
         cartItemId: 'item-2',
-        product: MENU_PRODUCTS[8], // Electric Blue Lagoon Mocktail
+        product: MENU_PRODUCTS[8],
         quantity: 2,
         unitPrice: 119,
         totalPrice: 238
@@ -63,7 +170,7 @@ const INITIAL_ORDERS: Order[] = [
     totalAmount: 806.8,
     paymentMethod: 'upi',
     paymentStatus: 'paid',
-    orderStatus: 'pending', // Awaiting owner approval!
+    orderStatus: 'pending',
     orderNotes: 'Deliver hot, please call on arrival',
     fssaiLicense: '22926112000173',
     createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
@@ -74,53 +181,6 @@ const INITIAL_ORDERS: Order[] = [
       dispatchedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
       type: 'order_placed_to_owner',
       message: '[NEW ORDER #ORD-91204] Rahul Sharma (9876543210) paid ₹806.80 via UPI. Address: Flat 402, Green Glen Heights. Status: PENDING OWNER APPROVAL.'
-    }
-  },
-  {
-    id: 'ORD-88210',
-    userId: 'user_foodie',
-    customerName: 'Rahul Sharma',
-    customerEmail: 'rahul@example.com',
-    customerPhone: '9876543210',
-    deliveryType: 'delivery',
-    deliveryAddress: 'Flat 402, Green Glen Heights, Park Street',
-    items: [
-      {
-        cartItemId: 'item-3',
-        product: MENU_PRODUCTS[3], // Cheesy Overload Margherita
-        quantity: 1,
-        selectedSize: 'Medium (10" - 6 Slices)',
-        cheeseBurst: true,
-        unitPrice: 389,
-        totalPrice: 389
-      }
-    ],
-    subtotal: 389,
-    discount: 0,
-    tax: 19.45,
-    deliveryFee: 40,
-    totalAmount: 448.45,
-    paymentMethod: 'card',
-    paymentStatus: 'paid',
-    orderStatus: 'confirmed', // Already approved!
-    fssaiLicense: '22926112000173',
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    estimatedDeliveryTime: '20 mins',
-    approvedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    approvedBy: 'Mr Bun Owner (9476088111)',
-    adminNotification: {
-      sentToPhone: '9476088111',
-      sentToEmail: 'contact@mrbun.in',
-      dispatchedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      type: 'order_placed_to_owner',
-      message: '[NEW ORDER #ORD-88210] Rahul Sharma (9876543210) paid ₹448.45 via CARD.'
-    },
-    customerConfirmation: {
-      sentToPhone: '9876543210',
-      sentToEmail: 'rahul@example.com',
-      dispatchedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-      type: 'owner_approved_to_customer',
-      message: '[MR BUN CONFIRMED] Your order #ORD-88210 was APPROVED by Owner! Kitchen is preparing your hot cheesy meal.'
     }
   }
 ];
@@ -180,24 +240,183 @@ function setStoredData<T>(key: string, data: T): void {
 
 // Unified SQLite / Storage API
 export const dbService = {
-  // Product queries
+  // 1. Store Settings (Logo, Brand Name, Contact, Payment Options)
+  getSettings: (): StoreSettings => {
+    return getStoredData<StoreSettings>(SETTINGS_STORAGE_KEY, DEFAULT_STORE_SETTINGS);
+  },
+
+  updateSettings: (partial: Partial<StoreSettings>): StoreSettings => {
+    const current = dbService.getSettings();
+    const merged: StoreSettings = {
+      ...current,
+      ...partial,
+      paymentOptions: {
+        ...current.paymentOptions,
+        ...(partial.paymentOptions || {})
+      }
+    };
+    setStoredData(SETTINGS_STORAGE_KEY, merged);
+    // Dispatch custom event so all active React listeners sync immediately without reload
+    window.dispatchEvent(new CustomEvent('mrbun-settings-changed', { detail: merged }));
+    return merged;
+  },
+
+  // 2. Product Management (Dynamic Menu Upload & CRUD)
   getProducts: async (category?: string): Promise<Product[]> => {
+    const products = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
     if (!category || category === 'all') {
-      return MENU_PRODUCTS;
+      return products;
     }
-    return MENU_PRODUCTS.filter(p => p.category === category);
+    return products.filter(p => p.category === category);
   },
 
   getProductById: async (id: string): Promise<Product | undefined> => {
-    return MENU_PRODUCTS.find(p => p.id === id);
+    const products = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
+    return products.find(p => p.id === id);
   },
 
-  // Auth & User operations
+  saveProduct: async (product: Product): Promise<Product> => {
+    const products = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
+    const existingIndex = products.findIndex(p => p.id === product.id);
+
+    if (existingIndex >= 0) {
+      products[existingIndex] = product;
+    } else {
+      products.unshift(product);
+    }
+
+    setStoredData(PRODUCTS_STORAGE_KEY, products);
+    window.dispatchEvent(new CustomEvent('mrbun-products-changed', { detail: products }));
+    return product;
+  },
+
+  deleteProduct: async (id: string): Promise<boolean> => {
+    const products = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
+    const filtered = products.filter(p => p.id !== id);
+    setStoredData(PRODUCTS_STORAGE_KEY, filtered);
+    window.dispatchEvent(new CustomEvent('mrbun-products-changed', { detail: filtered }));
+    return true;
+  },
+
+  // 3. Dynamic Offers & Discounts Management (Percentage & Flat Cash Benefit)
+  getOffers: (): StoreOffer[] => {
+    return getStoredData<StoreOffer[]>(OFFERS_STORAGE_KEY, INITIAL_OFFERS);
+  },
+
+  saveOffer: (offer: StoreOffer): StoreOffer => {
+    const offers = dbService.getOffers();
+    const idx = offers.findIndex(o => o.id === offer.id || o.code.toUpperCase() === offer.code.toUpperCase());
+
+    if (idx >= 0) {
+      offers[idx] = offer;
+    } else {
+      offers.push(offer);
+    }
+
+    setStoredData(OFFERS_STORAGE_KEY, offers);
+    window.dispatchEvent(new CustomEvent('mrbun-offers-changed', { detail: offers }));
+    return offer;
+  },
+
+  deleteOffer: (id: string): boolean => {
+    const offers = dbService.getOffers();
+    const filtered = offers.filter(o => o.id !== id);
+    setStoredData(OFFERS_STORAGE_KEY, filtered);
+    window.dispatchEvent(new CustomEvent('mrbun-offers-changed', { detail: filtered }));
+    return true;
+  },
+
+  validateOffer: (code: string, subtotal: number): { 
+    success: boolean; 
+    discountAmount: number; 
+    discountPercent: number; 
+    message: string; 
+    offer?: StoreOffer 
+  } => {
+    const offers = dbService.getOffers();
+    const normalized = code.trim().toUpperCase();
+    const found = offers.find(o => o.code.toUpperCase() === normalized && o.isActive);
+
+    if (!found) {
+      return { 
+        success: false, 
+        discountAmount: 0, 
+        discountPercent: 0, 
+        message: `Invalid or expired coupon code "${code}".` 
+      };
+    }
+
+    if (subtotal < found.minOrderAmount) {
+      return {
+        success: false,
+        discountAmount: 0,
+        discountPercent: 0,
+        message: `Coupon "${found.code}" requires minimum order of ₹${found.minOrderAmount}. (Current: ₹${subtotal})`
+      };
+    }
+
+    let discountAmount = 0;
+    let discountPercent = 0;
+
+    if (found.discountType === 'percentage') {
+      discountPercent = found.discountValue;
+      discountAmount = Math.round((subtotal * found.discountValue) / 100);
+      if (found.maxDiscount && discountAmount > found.maxDiscount) {
+        discountAmount = found.maxDiscount;
+      }
+      return {
+        success: true,
+        discountAmount,
+        discountPercent,
+        message: `🎉 ${found.discountValue}% OFF applied! Saved ₹${discountAmount}.`,
+        offer: found
+      };
+    } else {
+      // Direct cash benefit (flat amount)
+      discountAmount = Math.min(found.discountValue, subtotal);
+      return {
+        success: true,
+        discountAmount,
+        discountPercent: 0,
+        message: `🎉 Flat ₹${discountAmount} cash discount applied to your order!`,
+        offer: found
+      };
+    }
+  },
+
+  // 4. Outlets Management (Multiple Outlets CRUD)
+  getOutlets: async (): Promise<Outlet[]> => {
+    return getStoredData<Outlet[]>(OUTLETS_STORAGE_KEY, INITIAL_OUTLETS);
+  },
+
+  saveOutlet: async (outlet: Outlet): Promise<Outlet> => {
+    const outlets = getStoredData<Outlet[]>(OUTLETS_STORAGE_KEY, INITIAL_OUTLETS);
+    const idx = outlets.findIndex(o => o.id === outlet.id);
+
+    if (idx >= 0) {
+      outlets[idx] = outlet;
+    } else {
+      outlets.push(outlet);
+    }
+
+    setStoredData(OUTLETS_STORAGE_KEY, outlets);
+    window.dispatchEvent(new CustomEvent('mrbun-outlets-changed', { detail: outlets }));
+    return outlet;
+  },
+
+  deleteOutlet: async (id: string): Promise<boolean> => {
+    const outlets = getStoredData<Outlet[]>(OUTLETS_STORAGE_KEY, INITIAL_OUTLETS);
+    const filtered = outlets.filter(o => o.id !== id);
+    setStoredData(OUTLETS_STORAGE_KEY, filtered);
+    window.dispatchEvent(new CustomEvent('mrbun-outlets-changed', { detail: filtered }));
+    return true;
+  },
+
+  // 5. Auth & User operations
   login: async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
     const normalizedEmail = email.trim().toLowerCase();
     
-    // Quick demo handling: if admin
     if (normalizedEmail === 'admin@mrbun.in' && (password === 'admin123' || !password)) {
       const adminUser = users.find(u => u.email.toLowerCase() === normalizedEmail) || INITIAL_USERS[0];
       setStoredData(CURRENT_USER_KEY, adminUser);
@@ -210,7 +429,6 @@ export const dbService = {
       return { success: true, user: existing };
     }
 
-    // Auto-create customer user if valid email for frictionless fast food order
     const newUser: User = {
       id: 'usr_' + Math.random().toString(36).substring(2, 9),
       name: email.split('@')[0],
@@ -275,28 +493,28 @@ export const dbService = {
     localStorage.removeItem(CURRENT_USER_KEY);
   },
 
-  // Orders operations
+  // 6. Orders operations
   createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'fssaiLicense'>): Promise<Order> => {
     const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
+    const settings = dbService.getSettings();
     const orderId = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
     const now = new Date().toISOString();
 
     const itemsSummary = orderData.items.map(i => `${i.quantity}x ${i.product.name}`).join(', ');
 
-    // Automatic message dispatch to Owner Phone (9476088111) and Email (contact@mrbun.in)
     const adminNotification: NotificationDispatch = {
-      sentToPhone: '9476088111',
-      sentToEmail: 'contact@mrbun.in',
+      sentToPhone: settings.phone,
+      sentToEmail: settings.email,
       dispatchedAt: now,
       type: 'order_placed_to_owner',
-      message: `[NEW MR BUN ORDER #${orderId}] Customer: ${orderData.customerName} (${orderData.customerPhone}) placed an order for ₹${orderData.totalAmount} via ${orderData.paymentMethod.toUpperCase()} (${orderData.paymentStatus}). Items: ${itemsSummary}. Address: ${orderData.deliveryAddress}. STATUS: PENDING OWNER APPROVAL. Please log in to approve.`
+      message: `[NEW ${settings.brandName.toUpperCase()} ORDER #${orderId}] Customer: ${orderData.customerName} (${orderData.customerPhone}) placed an order for ₹${orderData.totalAmount} via ${orderData.paymentMethod.toUpperCase()} (${orderData.paymentStatus}). Items: ${itemsSummary}. Address: ${orderData.deliveryAddress}. STATUS: PENDING OWNER APPROVAL. Please log in to approve.`
     };
 
     const newOrder: Order = {
       ...orderData,
       id: orderId,
-      fssaiLicense: '22926112000173',
-      orderStatus: 'pending', // Starts in pending until owner approves!
+      fssaiLicense: settings.fssaiLicense,
+      orderStatus: 'pending',
       createdAt: now,
       estimatedDeliveryTime: '25-30 mins',
       adminNotification
@@ -307,25 +525,23 @@ export const dbService = {
     return newOrder;
   },
 
-  // Owner Approval action:
-  // Changes status from pending -> confirmed, and sends confirmation message to customer phone and email
   approveOrder: async (orderId: string): Promise<Order | null> => {
     const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
     const order = orders.find(o => o.id === orderId);
     if (!order) return null;
 
+    const settings = dbService.getSettings();
     const now = new Date().toISOString();
     order.orderStatus = 'confirmed';
     order.approvedAt = now;
-    order.approvedBy = 'Mr Bun Owner (9476088111)';
+    order.approvedBy = `${settings.brandName} Owner (${settings.phone})`;
 
-    // Confirmation message sent to customer phone and email
     order.customerConfirmation = {
       sentToPhone: order.customerPhone,
       sentToEmail: order.customerEmail,
       dispatchedAt: now,
       type: 'owner_approved_to_customer',
-      message: `[MR BUN CONFIRMED] Congratulations ${order.customerName}! Your order #${order.id} (₹${order.totalAmount}) has been APPROVED by the Mr Bun Owner. Fresh kitchen preparation will start shortly. Track live at mrbun.in/orders. Helpline: 9476088111.`
+      message: `[${settings.brandName.toUpperCase()} CONFIRMED] Congratulations ${order.customerName}! Your order #${order.id} (₹${order.totalAmount}) has been APPROVED by the ${settings.brandName} Owner. Fresh kitchen preparation will start shortly. Track live at mrbun.in/orders. Helpline: ${settings.phone}.`
     };
 
     setStoredData(ORDERS_STORAGE_KEY, orders);
@@ -356,19 +572,19 @@ export const dbService = {
     return null;
   },
 
-  // Party & Bulk Orders operations
+  // 7. Party & Bulk Orders operations
   createPartyOrder: async (data: Omit<PartyOrderBooking, 'id' | 'createdAt' | 'status'>): Promise<PartyOrderBooking> => {
     const bookings = getStoredData<PartyOrderBooking[]>(PARTY_ORDERS_STORAGE_KEY, INITIAL_PARTY_ORDERS);
+    const settings = dbService.getSettings();
     const partyId = 'PARTY-' + Math.floor(100 + Math.random() * 900);
     const now = new Date().toISOString();
 
-    // Automatic message dispatch to Owner Phone (9476088111) and Email (contact@mrbun.in)
     const adminNotification: NotificationDispatch = {
-      sentToPhone: '9476088111',
-      sentToEmail: 'contact@mrbun.in',
+      sentToPhone: settings.phone,
+      sentToEmail: settings.email,
       dispatchedAt: now,
       type: 'order_placed_to_owner',
-      message: `[NEW MR BUN PARTY BOOKING #${partyId}] ${data.fullName} (${data.phone}) booked ${data.eventType} for ${data.guestCount} guests. Package: ${data.packageName || 'Custom Feasts'}. Est Budget: ₹${data.budgetEstimate} via ${data.paymentMethod || 'ONLINE'}. STATUS: PENDING OWNER APPROVAL.`
+      message: `[NEW ${settings.brandName.toUpperCase()} PARTY BOOKING #${partyId}] ${data.fullName} (${data.phone}) booked ${data.eventType} for ${data.guestCount} guests. Package: ${data.packageName || 'Custom Feasts'}. Est Budget: ₹${data.budgetEstimate} via ${data.paymentMethod || 'ONLINE'}. STATUS: PENDING OWNER APPROVAL.`
     };
 
     const newBooking: PartyOrderBooking = {
@@ -389,17 +605,18 @@ export const dbService = {
     const booking = bookings.find(b => b.id === partyId);
     if (!booking) return null;
 
+    const settings = dbService.getSettings();
     const now = new Date().toISOString();
     booking.status = 'confirmed';
     booking.approvedAt = now;
-    booking.approvedBy = 'Mr Bun Catering Desk (9476088111)';
+    booking.approvedBy = `${settings.brandName} Catering Desk (${settings.phone})`;
 
     booking.customerConfirmation = {
       sentToPhone: booking.phone,
       sentToEmail: booking.email,
       dispatchedAt: now,
       type: 'owner_approved_to_customer',
-      message: `[MR BUN PARTY CONFIRMED] Dear ${booking.fullName}, your party booking #${booking.id} (${booking.eventType} for ${booking.guestCount} guests on ${booking.eventDate}) is APPROVED by Mr Bun Owner! Our Head Chef will coordinate directly at ${booking.phone}. Helpline: 9476088111.`
+      message: `[${settings.brandName.toUpperCase()} PARTY CONFIRMED] Dear ${booking.fullName}, your party booking #${booking.id} (${booking.eventType} for ${booking.guestCount} guests on ${booking.eventDate}) is APPROVED by ${settings.brandName} Owner! Our Head Chef will coordinate directly at ${booking.phone}. Helpline: ${settings.phone}.`
     };
 
     setStoredData(PARTY_ORDERS_STORAGE_KEY, bookings);

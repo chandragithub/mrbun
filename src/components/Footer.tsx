@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
 import { 
   Phone, 
   Mail, 
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
+  const { settings } = useSettings();
   return (
     <footer className="bg-slate-950 text-slate-300 pt-16 pb-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,16 +28,19 @@ export const Footer: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="flex items-center gap-3 group">
               <img
-                src="/logo.png"
-                alt="Mr Bun Mascot Logo"
+                src={settings.logoUrl || '/logo.png'}
+                alt={`${settings.brandName} Logo`}
                 className="w-14 h-14 object-contain rounded-xl bg-white p-1 shadow-md transition-transform group-hover:scale-105"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
               />
               <div>
                 <h3 className="text-2xl font-black text-white font-display">
-                  Mr <span className="text-amber-500">Bun</span>
+                  {settings.brandName}
                 </h3>
                 <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest -mt-0.5">
-                  Fresh Fast Food &amp; Bulk Catering
+                  {settings.tagline}
                 </p>
               </div>
             </Link>
@@ -51,7 +56,7 @@ export const Footer: React.FC = () => {
                 <span>Food Safety &amp; Standards Authority of India</span>
               </div>
               <p className="text-[11px] text-slate-400">
-                FSSAI License No: <span className="font-mono font-bold text-amber-400 tracking-wider">22926112000173</span>
+                FSSAI License No: <span className="font-mono font-bold text-amber-400 tracking-wider">{settings.fssaiLicense}</span>
               </p>
               <p className="text-[10px] text-emerald-400 font-medium">✓ 100% Certified Safe &amp; Fresh Ingredients</p>
             </div>
@@ -65,23 +70,23 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-xs text-slate-300">
               <li className="flex items-center gap-2">
                 <span className="text-slate-400">Company:</span>
-                <strong className="text-white font-bold">Mr Bun</strong>
+                <strong className="text-white font-bold">{settings.brandName}</strong>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <a href="tel:9476088111" className="hover:text-amber-400 font-bold transition">
-                  9476088111
+                <a href={`tel:${settings.phone}`} className="hover:text-amber-400 font-bold transition">
+                  {settings.phone}
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <a href="mailto:contact@mrbun.in" className="hover:text-amber-400 font-bold transition">
-                  contact@mrbun.in
+                <a href={`mailto:${settings.email}`} className="hover:text-amber-400 font-bold transition">
+                  {settings.email}
                 </a>
               </li>
               <li className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span>Mr Bun Central Kitchen &amp; Food Hub, Main Avenue</span>
+                <span>{settings.brandName} Central Kitchen &amp; Food Hub, Main Avenue</span>
               </li>
               <li className="flex items-center gap-2 text-slate-400 pt-1">
                 <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -182,17 +187,17 @@ export const Footer: React.FC = () => {
 
         {/* Bottom copyright row */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© 2026 Mr Bun. All rights reserved. Registered Trademark.</p>
+          <p>© 2026 {settings.brandName}. All rights reserved. Registered Trademark.</p>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <Link to="/franchise" className="text-amber-400 font-bold hover:underline flex items-center gap-1">
               <span>Apply for Franchise</span>
             </Link>
             <span>•</span>
-            <span className="font-mono text-slate-400">FSSAI: 22926112000173</span>
+            <span className="font-mono text-slate-400">FSSAI: {settings.fssaiLicense}</span>
             <span>•</span>
-            <a href="tel:9476088111" className="text-amber-400 hover:underline">9476088111</a>
+            <a href={`tel:${settings.phone}`} className="text-amber-400 hover:underline">{settings.phone}</a>
             <span>•</span>
-            <a href="mailto:contact@mrbun.in" className="text-amber-400 hover:underline">contact@mrbun.in</a>
+            <a href={`mailto:${settings.email}`} className="text-amber-400 hover:underline">{settings.email}</a>
           </div>
         </div>
 
