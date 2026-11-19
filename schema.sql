@@ -1,17 +1,22 @@
 -- Mr Bun Fast Food Database Schema (Cloudflare D1 SQLite)
--- Company: Mr Bun | FSSAI: 22926112000173 | Contact: 9476088111 / contact@mrbun.in
+-- Database Name: mrbun (0b367436-034c-462f-8811-c1ac76ea2023)
+-- Subdomain: mrbun.ceansystech.workers.dev
+-- Helpline: 9476088111 | Email: contact@mrbun.in | FSSAI: 22926112000173
 
-CREATE TABLE IF NOT EXISTS users (
+-- 1. Store Settings (Brand Identity, Logo, Legal Details, Payment Gateways & Cash Policies)
+CREATE TABLE IF NOT EXISTS store_settings (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    phone TEXT,
-    password_hash TEXT NOT NULL,
-    address TEXT,
-    role TEXT DEFAULT 'customer',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    brand_name TEXT NOT NULL,
+    tagline TEXT NOT NULL,
+    logo_url TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT NOT NULL,
+    fssai_license TEXT NOT NULL,
+    payment_options_json TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 2. Dynamic Menu Products Table
 CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -22,13 +27,47 @@ CREATE TABLE IF NOT EXISTS products (
     is_veg INTEGER DEFAULT 1, -- 1 = veg, 0 = non-veg
     spicy_level INTEGER DEFAULT 1, -- 0 to 3
     rating REAL DEFAULT 4.8,
-    reviews_count INTEGER DEFAULT 120,
+    reviews_count INTEGER DEFAULT 12,
     image TEXT NOT NULL,
     is_popular INTEGER DEFAULT 0,
+    is_new INTEGER DEFAULT 1,
     tags TEXT,
+    options_json TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 3. Dynamic Offers & Discounts Table (Percentage OFF or Direct Cash Benefit)
+CREATE TABLE IF NOT EXISTS offers (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    discount_type TEXT NOT NULL, -- 'percentage' or 'flat'
+    discount_value REAL NOT NULL,
+    min_order_amount REAL DEFAULT 0,
+    max_discount REAL,
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Multiple Outlets & Kitchens Table
+CREATE TABLE IF NOT EXISTS outlets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    address TEXT NOT NULL,
+    landmark TEXT,
+    phone TEXT NOT NULL,
+    timings TEXT NOT NULL,
+    status TEXT NOT NULL, -- 'Open Now', 'Late Night Available', 'Coming Soon', 'Renovating'
+    image TEXT NOT NULL,
+    features_json TEXT,
+    seating_capacity TEXT,
+    is_flagship INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Customer Orders & Approvals Table
 CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
     user_id TEXT,
@@ -43,22 +82,26 @@ CREATE TABLE IF NOT EXISTS orders (
     tax REAL NOT NULL,
     delivery_fee REAL DEFAULT 0,
     total_amount REAL NOT NULL,
-    payment_method TEXT DEFAULT 'cod', -- 'cod', 'upi', 'card'
+    payment_method TEXT DEFAULT 'upi', -- 'cod', 'upi', 'card'
     payment_status TEXT DEFAULT 'pending', -- 'pending', 'paid'
-    order_status TEXT DEFAULT 'received', -- 'received', 'preparing', 'baking', 'out_for_delivery', 'delivered'
+    order_status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'preparing', 'baking', 'out_for_delivery', 'delivered', 'cancelled'
     order_notes TEXT,
     fssai_license TEXT DEFAULT '22926112000173',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
+    admin_notification_json TEXT,
+    customer_confirmation_json TEXT,
+    approved_at TEXT,
+    approved_by TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 6. Party & Catering Bookings Table
 CREATE TABLE IF NOT EXISTS party_orders (
     id TEXT PRIMARY KEY,
     user_id TEXT,
     full_name TEXT NOT NULL,
     phone TEXT NOT NULL,
     email TEXT NOT NULL,
-    event_type TEXT NOT NULL, -- 'Birthday Party', 'Corporate Event', 'House Party', 'College Fest', 'Game Night'
+    event_type TEXT NOT NULL,
     guest_count INTEGER NOT NULL,
     event_date TEXT NOT NULL,
     event_time TEXT NOT NULL,
@@ -66,12 +109,30 @@ CREATE TABLE IF NOT EXISTS party_orders (
     package_selected TEXT,
     customized_items_json TEXT,
     budget_estimate REAL NOT NULL,
+    payment_method TEXT DEFAULT 'online', -- 'online', 'upi', 'cash_before_prep'
+    payment_status TEXT DEFAULT 'pending',
     special_notes TEXT,
-    status TEXT DEFAULT 'inquiry_received', -- 'inquiry_received', 'confirmed', 'catering_scheduled', 'completed'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
+    status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'catering_scheduled', 'completed', 'cancelled'
+    admin_notification_json TEXT,
+    customer_confirmation_json TEXT,
+    approved_at TEXT,
+    approved_by TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 7. Registered Users & Admins
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    password_hash TEXT NOT NULL,
+    address TEXT,
+    role TEXT DEFAULT 'customer', -- 'customer' or 'admin'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Franchise Expressions of Interest
 CREATE TABLE IF NOT EXISTS franchise_applications (
     id TEXT PRIMARY KEY,
     full_name TEXT NOT NULL,
@@ -88,6 +149,7 @@ CREATE TABLE IF NOT EXISTS franchise_applications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 9. Customer Food & Service Reviews
 CREATE TABLE IF NOT EXISTS reviews (
     id TEXT PRIMARY KEY,
     customer_name TEXT NOT NULL,

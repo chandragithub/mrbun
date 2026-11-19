@@ -34,17 +34,25 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const loadData = useCallback(async () => {
     try {
+      // 1. Instant load from local cache
       const s = dbService.getSettings();
       setSettings(s);
-
-      const prods = await dbService.getProducts();
-      setProducts(prods);
-
       const offs = dbService.getOffers();
       setOffers(offs);
 
+      // 2. Load from Cloudflare D1
+      const prods = await dbService.getProducts();
+      setProducts(prods);
+
       const outs = await dbService.getOutlets();
       setOutlets(outs);
+
+      // 3. Sync latest settings and offers from Cloudflare D1
+      const liveSettings = await dbService.fetchSettingsFromD1();
+      setSettings(liveSettings);
+
+      const liveOffers = await dbService.fetchOffersFromD1();
+      setOffers(liveOffers);
     } catch (err) {
       console.error('Error loading store settings and data:', err);
     }

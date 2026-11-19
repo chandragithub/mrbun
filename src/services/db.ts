@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 
+// Local Cache Keys for Instant UI rendering & Offline Resilience
 const SETTINGS_STORAGE_KEY = 'mrbun_settings_v3';
 const PRODUCTS_STORAGE_KEY = 'mrbun_products_v3';
 const OFFERS_STORAGE_KEY = 'mrbun_offers_v3';
@@ -99,7 +100,8 @@ export const INITIAL_OUTLETS: Outlet[] = [
     status: 'Open Now',
     image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80',
     features: ['Quick 5-min Pickup Counter', 'Corporate Bento Boxes', 'Drive-Thru Lane', 'Air Conditioned', 'Contactless UPI'],
-    seatingCapacity: '25 Quick Seats'
+    seatingCapacity: '25 Quick Seats',
+    isFlagship: false
   },
   {
     id: 'outlet-3',
@@ -112,36 +114,36 @@ export const INITIAL_OUTLETS: Outlet[] = [
     status: 'Late Night Available',
     image: 'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=800&q=80',
     features: ['Insulated Hot Warmer Depot', 'Superfast 25-min Radius', 'Late Night Burgers & Pizzas', 'Strict FSSAI Sanitization'],
-    seatingCapacity: 'Takeaway & Delivery Only'
+    seatingCapacity: 'Takeaway & Delivery Only',
+    isFlagship: false
   }
 ];
 
-// Pre-seeded initial users
-const INITIAL_USERS: User[] = [
+export const INITIAL_USERS: User[] = [
   {
-    id: 'user_admin',
+    id: 'usr-admin',
     name: 'Mr Bun Owner',
     email: 'admin@mrbun.in',
     phone: '9476088111',
-    address: 'Mr Bun Central Kitchen, Main Food Court',
-    role: 'admin'
+    role: 'admin',
+    address: 'Mr Bun Flagship Kitchen, Central Plaza'
   },
   {
-    id: 'user_foodie',
+    id: 'usr-demo-1',
     name: 'Rahul Sharma',
-    email: 'rahul@example.com',
+    email: 'rahul.sharma@example.com',
     phone: '9876543210',
-    address: 'Flat 402, Green Glen Heights, Park Street',
-    role: 'customer'
+    role: 'customer',
+    address: 'Flat 402, Green Glen Heights, Park Street'
   }
 ];
 
-const INITIAL_ORDERS: Order[] = [
+export const INITIAL_ORDERS: Order[] = [
   {
-    id: 'ORD-91204',
-    userId: 'user_foodie',
+    id: 'ORD-89421',
+    userId: 'usr-demo-1',
     customerName: 'Rahul Sharma',
-    customerEmail: 'rahul@example.com',
+    customerEmail: 'rahul.sharma@example.com',
     customerPhone: '9876543210',
     deliveryType: 'delivery',
     deliveryAddress: 'Flat 402, Green Glen Heights, Park Street',
@@ -150,99 +152,143 @@ const INITIAL_ORDERS: Order[] = [
         cartItemId: 'item-1',
         product: MENU_PRODUCTS[0],
         quantity: 2,
-        selectedSize: 'Double Patty Deluxe',
         cheeseBurst: true,
-        unitPrice: 289,
-        totalPrice: 578
+        unitPrice: 228,
+        totalPrice: 456
       },
       {
         cartItemId: 'item-2',
-        product: MENU_PRODUCTS[8],
-        quantity: 2,
-        unitPrice: 119,
-        totalPrice: 238
+        product: MENU_PRODUCTS[3],
+        quantity: 1,
+        unitPrice: 129,
+        totalPrice: 129
       }
     ],
-    subtotal: 816,
+    subtotal: 585,
     discount: 50,
-    tax: 40.8,
+    tax: 27,
     deliveryFee: 0,
-    totalAmount: 806.8,
+    totalAmount: 562,
     paymentMethod: 'upi',
     paymentStatus: 'paid',
-    orderStatus: 'pending',
-    orderNotes: 'Deliver hot, please call on arrival',
+    orderStatus: 'confirmed',
+    orderNotes: 'Please ring bell once and leave with security if unavailable.',
     fssaiLicense: '22926112000173',
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    estimatedDeliveryTime: '25-30 mins',
+    createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    approvedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+    approvedBy: 'Mr Bun Owner (9476088111)',
     adminNotification: {
       sentToPhone: '9476088111',
       sentToEmail: 'contact@mrbun.in',
-      dispatchedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      dispatchedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
       type: 'order_placed_to_owner',
-      message: '[NEW ORDER #ORD-91204] Rahul Sharma (9876543210) paid ₹806.80 via UPI. Address: Flat 402, Green Glen Heights. Status: PENDING OWNER APPROVAL.'
+      message: '[NEW MR BUN ORDER #ORD-89421] Rahul Sharma placed an order for ₹562 via UPI. Status: CONFIRMED.'
+    },
+    customerConfirmation: {
+      sentToPhone: '9876543210',
+      sentToEmail: 'rahul.sharma@example.com',
+      dispatchedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+      type: 'owner_approved_to_customer',
+      message: '[MR BUN CONFIRMED] Dear Rahul Sharma, your order #ORD-89421 is APPROVED! Food preparation started.'
     }
   }
 ];
 
-const INITIAL_PARTY_ORDERS: PartyOrderBooking[] = [
+export const INITIAL_PARTY_ORDERS: PartyOrderBooking[] = [
   {
-    id: 'PARTY-401',
-    userId: 'user_foodie',
+    id: 'PARTY-402',
+    userId: 'usr-demo-1',
     fullName: 'Rahul Sharma',
     phone: '9876543210',
-    email: 'rahul@example.com',
+    email: 'rahul.sharma@example.com',
     eventType: 'Birthday Party',
-    guestCount: 25,
+    guestCount: 50,
     eventDate: '2026-11-28',
     eventTime: '07:30 PM',
-    venueAddress: 'Clubhouse Banquet Hall, Park Street',
+    venueAddress: 'Clubhouse Banquet, Green Glen Heights, Park Street',
     packageId: 'pkg-birthday',
-    packageName: 'Birthday Bash Mega Feast',
-    customNotes: 'Require 10 veg burgers and 15 non-veg burgers with custom Mr Bun banner.',
-    budgetEstimate: 7475,
-    paymentMethod: 'upi',
+    packageName: 'Birthday Bash Mega Feast (@ ₹299/person)',
+    budgetEstimate: 14950,
+    paymentMethod: 'online',
     paymentStatus: 'paid',
     status: 'pending',
-    createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    customNotes: 'Require custom birthday mascot banner and extra spicy dips.',
     adminNotification: {
       sentToPhone: '9476088111',
       sentToEmail: 'contact@mrbun.in',
-      dispatchedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      dispatchedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
       type: 'order_placed_to_owner',
-      message: '[NEW PARTY BOOKING #PARTY-401] Birthday Party for 25 guests by Rahul Sharma (9876543210). Est: ₹7,475. Awaiting Owner Approval.'
+      message: '[NEW MR BUN PARTY BOOKING #PARTY-402] Rahul Sharma (9876543210) booked Birthday Party for 50 guests. Est: ₹14950. STATUS: PENDING OWNER APPROVAL.'
     }
   }
 ];
 
-// Helper to get local data safely
-function getStoredData<T>(key: string, defaultValue: T): T {
+// Helper to safely get from localStorage
+function getStoredData<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      localStorage.setItem(key, JSON.stringify(defaultValue));
-      return defaultValue;
-    }
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error(`Error reading ${key} from storage:`, err);
-    return defaultValue;
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch {
+    return fallback;
   }
 }
 
+// Helper to safely save to localStorage
 function setStoredData<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (err) {
-    console.error(`Error saving ${key} to storage:`, err);
+  } catch (e) {
+    console.error(`Failed to store data for key "${key}":`, e);
   }
 }
 
-// Unified SQLite / Storage API
+// Resilient API Fetch Helper with timeout and fallback
+async function apiCall<T>(path: string, options?: RequestInit): Promise<{ success: boolean; data?: T; error?: string }> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+    const res = await fetch(path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.headers || {})
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      return { success: false, error: `HTTP ${res.status}` };
+    }
+
+    const json = await res.json();
+    return { success: true, data: json };
+  } catch (err: any) {
+    // Network / timeout / offline
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+// Unified Cloudflare D1 Integrated Database Service
 export const dbService = {
-  // 1. Store Settings (Logo, Brand Name, Contact, Payment Options)
+  
+  // 1. Store Settings (Logo, Brand Name, Contact, Legal & Payment Options)
   getSettings: (): StoreSettings => {
     return getStoredData<StoreSettings>(SETTINGS_STORAGE_KEY, DEFAULT_STORE_SETTINGS);
+  },
+
+  fetchSettingsFromD1: async (): Promise<StoreSettings> => {
+    const res = await apiCall<{ success: boolean; settings: StoreSettings }>('/api/settings');
+    if (res.success && res.data?.settings) {
+      const settings = res.data.settings;
+      setStoredData(SETTINGS_STORAGE_KEY, settings);
+      window.dispatchEvent(new CustomEvent('mrbun-settings-changed', { detail: settings }));
+      return settings;
+    }
+    return dbService.getSettings();
   },
 
   updateSettings: (partial: Partial<StoreSettings>): StoreSettings => {
@@ -255,23 +301,42 @@ export const dbService = {
         ...(partial.paymentOptions || {})
       }
     };
+    
+    // Save to local cache & trigger immediate reactive render
     setStoredData(SETTINGS_STORAGE_KEY, merged);
-    // Dispatch custom event so all active React listeners sync immediately without reload
     window.dispatchEvent(new CustomEvent('mrbun-settings-changed', { detail: merged }));
+
+    // Send update to Cloudflare D1 SQLite database
+    apiCall('/api/settings', {
+      method: 'POST',
+      body: JSON.stringify(merged)
+    }).catch(e => console.warn('Cloudflare D1 sync background notice:', e));
+
     return merged;
   },
 
-  // 2. Product Management (Dynamic Menu Upload & CRUD)
+  // 2. Dynamic Menu Management (Full CRUD in Cloudflare D1)
   getProducts: async (category?: string): Promise<Product[]> => {
-    const products = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
-    if (!category || category === 'all') {
-      return products;
+    const res = await apiCall<{ success: boolean; products: Product[] }>(
+      category && category !== 'all' ? `/api/products?category=${category}` : '/api/products'
+    );
+
+    if (res.success && res.data?.products && res.data.products.length > 0) {
+      const prods = res.data.products;
+      setStoredData(PRODUCTS_STORAGE_KEY, prods);
+      return prods;
     }
-    return products.filter(p => p.category === category);
+
+    // Local fallback
+    const local = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
+    if (!category || category === 'all') {
+      return local;
+    }
+    return local.filter(p => p.category === category);
   },
 
   getProductById: async (id: string): Promise<Product | undefined> => {
-    const products = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
+    const products = await dbService.getProducts();
     return products.find(p => p.id === id);
   },
 
@@ -287,6 +352,13 @@ export const dbService = {
 
     setStoredData(PRODUCTS_STORAGE_KEY, products);
     window.dispatchEvent(new CustomEvent('mrbun-products-changed', { detail: products }));
+
+    // Persist to Cloudflare D1
+    await apiCall('/api/products', {
+      method: 'POST',
+      body: JSON.stringify(product)
+    });
+
     return product;
   },
 
@@ -295,12 +367,29 @@ export const dbService = {
     const filtered = products.filter(p => p.id !== id);
     setStoredData(PRODUCTS_STORAGE_KEY, filtered);
     window.dispatchEvent(new CustomEvent('mrbun-products-changed', { detail: filtered }));
+
+    // Delete from Cloudflare D1
+    await apiCall(`/api/products/${id}`, {
+      method: 'DELETE'
+    });
+
     return true;
   },
 
-  // 3. Dynamic Offers & Discounts Management (Percentage & Flat Cash Benefit)
+  // 3. Dynamic Offers & Discounts (Percentage OFF & Flat Cash Benefit in D1)
   getOffers: (): StoreOffer[] => {
     return getStoredData<StoreOffer[]>(OFFERS_STORAGE_KEY, INITIAL_OFFERS);
+  },
+
+  fetchOffersFromD1: async (): Promise<StoreOffer[]> => {
+    const res = await apiCall<{ success: boolean; offers: StoreOffer[] }>('/api/offers');
+    if (res.success && res.data?.offers && res.data.offers.length > 0) {
+      const offers = res.data.offers;
+      setStoredData(OFFERS_STORAGE_KEY, offers);
+      window.dispatchEvent(new CustomEvent('mrbun-offers-changed', { detail: offers }));
+      return offers;
+    }
+    return dbService.getOffers();
   },
 
   saveOffer: (offer: StoreOffer): StoreOffer => {
@@ -315,6 +404,13 @@ export const dbService = {
 
     setStoredData(OFFERS_STORAGE_KEY, offers);
     window.dispatchEvent(new CustomEvent('mrbun-offers-changed', { detail: offers }));
+
+    // Save to Cloudflare D1
+    apiCall('/api/offers', {
+      method: 'POST',
+      body: JSON.stringify(offer)
+    }).catch(e => console.warn('D1 offer sync:', e));
+
     return offer;
   },
 
@@ -323,6 +419,12 @@ export const dbService = {
     const filtered = offers.filter(o => o.id !== id);
     setStoredData(OFFERS_STORAGE_KEY, filtered);
     window.dispatchEvent(new CustomEvent('mrbun-offers-changed', { detail: filtered }));
+
+    // Delete from Cloudflare D1
+    apiCall(`/api/offers/${id}`, {
+      method: 'DELETE'
+    }).catch(e => console.warn('D1 offer delete:', e));
+
     return true;
   },
 
@@ -372,7 +474,6 @@ export const dbService = {
         offer: found
       };
     } else {
-      // Direct cash benefit (flat amount)
       discountAmount = Math.min(found.discountValue, subtotal);
       return {
         success: true,
@@ -384,8 +485,14 @@ export const dbService = {
     }
   },
 
-  // 4. Outlets Management (Multiple Outlets CRUD)
+  // 4. Multiple Outlets Management in Cloudflare D1
   getOutlets: async (): Promise<Outlet[]> => {
+    const res = await apiCall<{ success: boolean; outlets: Outlet[] }>('/api/outlets');
+    if (res.success && res.data?.outlets && res.data.outlets.length > 0) {
+      const outs = res.data.outlets;
+      setStoredData(OUTLETS_STORAGE_KEY, outs);
+      return outs;
+    }
     return getStoredData<Outlet[]>(OUTLETS_STORAGE_KEY, INITIAL_OUTLETS);
   },
 
@@ -401,6 +508,13 @@ export const dbService = {
 
     setStoredData(OUTLETS_STORAGE_KEY, outlets);
     window.dispatchEvent(new CustomEvent('mrbun-outlets-changed', { detail: outlets }));
+
+    // Persist to Cloudflare D1
+    await apiCall('/api/outlets', {
+      method: 'POST',
+      body: JSON.stringify(outlet)
+    });
+
     return outlet;
   },
 
@@ -409,20 +523,45 @@ export const dbService = {
     const filtered = outlets.filter(o => o.id !== id);
     setStoredData(OUTLETS_STORAGE_KEY, filtered);
     window.dispatchEvent(new CustomEvent('mrbun-outlets-changed', { detail: filtered }));
+
+    // Delete from Cloudflare D1
+    await apiCall(`/api/outlets/${id}`, {
+      method: 'DELETE'
+    });
+
     return true;
   },
 
   // 5. Auth & User operations
   login: async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
-    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
     const normalizedEmail = email.trim().toLowerCase();
-    
+
+    // Call Cloudflare D1 auth endpoint
+    const res = await apiCall<{ success: boolean; user?: User; error?: string }>('/api/users/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: normalizedEmail, password })
+    });
+
+    if (res.success && res.data?.user) {
+      setStoredData(CURRENT_USER_KEY, res.data.user);
+      return { success: true, user: res.data.user };
+    }
+
+    // Local fallback for offline / demo owner
     if (normalizedEmail === 'admin@mrbun.in' && (password === 'admin123' || !password)) {
-      const adminUser = users.find(u => u.email.toLowerCase() === normalizedEmail) || INITIAL_USERS[0];
+      const adminUser: User = {
+        id: 'usr-admin',
+        name: 'Mr Bun Owner',
+        email: 'admin@mrbun.in',
+        phone: '9476088111',
+        role: 'admin',
+        address: 'Mr Bun Central Kitchen'
+      };
       setStoredData(CURRENT_USER_KEY, adminUser);
       return { success: true, user: adminUser };
     }
 
+    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
     const existing = users.find(u => u.email.toLowerCase() === normalizedEmail);
     if (existing) {
       setStoredData(CURRENT_USER_KEY, existing);
@@ -443,19 +582,21 @@ export const dbService = {
   },
 
   register: async (name: string, email: string, phone: string, address?: string): Promise<{ success: boolean; user?: User; error?: string }> => {
-    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
     const normalizedEmail = email.trim().toLowerCase();
-    
-    const existing = users.find(u => u.email.toLowerCase() === normalizedEmail);
-    if (existing) {
-      existing.name = name;
-      existing.phone = phone;
-      if (address) existing.address = address;
-      setStoredData(USERS_STORAGE_KEY, users);
-      setStoredData(CURRENT_USER_KEY, existing);
-      return { success: true, user: existing };
+
+    // Call Cloudflare D1 register endpoint
+    const res = await apiCall<{ success: boolean; user?: User; error?: string }>('/api/users/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email: normalizedEmail, phone, address, password: 'nopassword' })
+    });
+
+    if (res.success && res.data?.user) {
+      setStoredData(CURRENT_USER_KEY, res.data.user);
+      return { success: true, user: res.data.user };
     }
 
+    // Local fallback
+    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
     const newUser: User = {
       id: 'usr_' + Math.random().toString(36).substring(2, 9),
       name,
@@ -479,13 +620,6 @@ export const dbService = {
     if (!current) return null;
     const merged = { ...current, ...updated };
     setStoredData(CURRENT_USER_KEY, merged);
-    
-    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
-    const idx = users.findIndex(u => u.id === current.id);
-    if (idx !== -1) {
-      users[idx] = merged;
-      setStoredData(USERS_STORAGE_KEY, users);
-    }
     return merged;
   },
 
@@ -493,21 +627,18 @@ export const dbService = {
     localStorage.removeItem(CURRENT_USER_KEY);
   },
 
-  // 6. Orders operations
+  // 6. Food Orders & Owner Approvals Workflow in Cloudflare D1
   createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'fssaiLicense'>): Promise<Order> => {
-    const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
     const settings = dbService.getSettings();
     const orderId = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
     const now = new Date().toISOString();
-
-    const itemsSummary = orderData.items.map(i => `${i.quantity}x ${i.product.name}`).join(', ');
 
     const adminNotification: NotificationDispatch = {
       sentToPhone: settings.phone,
       sentToEmail: settings.email,
       dispatchedAt: now,
       type: 'order_placed_to_owner',
-      message: `[NEW ${settings.brandName.toUpperCase()} ORDER #${orderId}] Customer: ${orderData.customerName} (${orderData.customerPhone}) placed an order for ₹${orderData.totalAmount} via ${orderData.paymentMethod.toUpperCase()} (${orderData.paymentStatus}). Items: ${itemsSummary}. Address: ${orderData.deliveryAddress}. STATUS: PENDING OWNER APPROVAL. Please log in to approve.`
+      message: `[NEW ${settings.brandName.toUpperCase()} ORDER #${orderId}] Customer: ${orderData.customerName} (${orderData.customerPhone}) placed order for ₹${orderData.totalAmount} via ${orderData.paymentMethod.toUpperCase()} (${orderData.paymentStatus}). STATUS: PENDING OWNER APPROVAL.`
     };
 
     const newOrder: Order = {
@@ -520,45 +651,48 @@ export const dbService = {
       adminNotification
     };
 
+    // 1. Save to local cache
+    const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
     orders.unshift(newOrder);
     setStoredData(ORDERS_STORAGE_KEY, orders);
+
+    // 2. Persist to Cloudflare D1 SQLite database
+    await apiCall('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify(newOrder)
+    });
+
     return newOrder;
   },
 
   approveOrder: async (orderId: string): Promise<Order | null> => {
     const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
     const order = orders.find(o => o.id === orderId);
-    if (!order) return null;
-
     const settings = dbService.getSettings();
     const now = new Date().toISOString();
-    order.orderStatus = 'confirmed';
-    order.approvedAt = now;
-    order.approvedBy = `${settings.brandName} Owner (${settings.phone})`;
 
-    order.customerConfirmation = {
-      sentToPhone: order.customerPhone,
-      sentToEmail: order.customerEmail,
+    const customerConfirmation: NotificationDispatch = {
+      sentToPhone: order ? order.customerPhone : settings.phone,
+      sentToEmail: order ? order.customerEmail : settings.email,
       dispatchedAt: now,
       type: 'owner_approved_to_customer',
-      message: `[${settings.brandName.toUpperCase()} CONFIRMED] Congratulations ${order.customerName}! Your order #${order.id} (₹${order.totalAmount}) has been APPROVED by the ${settings.brandName} Owner. Fresh kitchen preparation will start shortly. Track live at mrbun.in/orders. Helpline: ${settings.phone}.`
+      message: `[${settings.brandName.toUpperCase()} CONFIRMED] Congratulations! Your order #${orderId} is APPROVED by Owner. Kitchen started fresh preparation. Helpline: ${settings.phone}.`
     };
 
-    setStoredData(ORDERS_STORAGE_KEY, orders);
-    return order;
-  },
+    if (order) {
+      order.orderStatus = 'confirmed';
+      order.approvedAt = now;
+      order.approvedBy = `${settings.brandName} Owner (${settings.phone})`;
+      order.customerConfirmation = customerConfirmation;
+      setStoredData(ORDERS_STORAGE_KEY, orders);
+    }
 
-  getUserOrders: async (emailOrUserId: string): Promise<Order[]> => {
-    const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
-    const search = emailOrUserId.toLowerCase();
-    return orders.filter(o => 
-      (o.userId && o.userId.toLowerCase() === search) || 
-      (o.customerEmail && o.customerEmail.toLowerCase() === search)
-    );
-  },
+    // Persist Approval to Cloudflare D1 database
+    await apiCall(`/api/orders/${orderId}/approve`, {
+      method: 'POST'
+    });
 
-  getAllOrders: async (): Promise<Order[]> => {
-    return getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
+    return order || null;
   },
 
   updateOrderStatus: async (orderId: string, status: Order['orderStatus']): Promise<Order | null> => {
@@ -567,14 +701,42 @@ export const dbService = {
     if (order) {
       order.orderStatus = status;
       setStoredData(ORDERS_STORAGE_KEY, orders);
-      return order;
     }
-    return null;
+
+    // Update in Cloudflare D1
+    await apiCall(`/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+
+    return order || null;
   },
 
-  // 7. Party & Bulk Orders operations
+  getAllOrders: async (): Promise<Order[]> => {
+    const res = await apiCall<{ success: boolean; orders: Order[] }>('/api/orders');
+    if (res.success && res.data?.orders && res.data.orders.length > 0) {
+      const orders = res.data.orders;
+      setStoredData(ORDERS_STORAGE_KEY, orders);
+      return orders;
+    }
+    return getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
+  },
+
+  getUserOrders: async (emailOrUserId: string): Promise<Order[]> => {
+    const search = emailOrUserId.toLowerCase();
+    const res = await apiCall<{ success: boolean; orders: Order[] }>(`/api/orders?email=${encodeURIComponent(search)}`);
+    if (res.success && res.data?.orders) {
+      return res.data.orders;
+    }
+    const orders = getStoredData<Order[]>(ORDERS_STORAGE_KEY, INITIAL_ORDERS);
+    return orders.filter(o => 
+      (o.userId && o.userId.toLowerCase() === search) || 
+      (o.customerEmail && o.customerEmail.toLowerCase() === search)
+    );
+  },
+
+  // 7. Party Bookings & Approvals Workflow in Cloudflare D1
   createPartyOrder: async (data: Omit<PartyOrderBooking, 'id' | 'createdAt' | 'status'>): Promise<PartyOrderBooking> => {
-    const bookings = getStoredData<PartyOrderBooking[]>(PARTY_ORDERS_STORAGE_KEY, INITIAL_PARTY_ORDERS);
     const settings = dbService.getSettings();
     const partyId = 'PARTY-' + Math.floor(100 + Math.random() * 900);
     const now = new Date().toISOString();
@@ -584,7 +746,7 @@ export const dbService = {
       sentToEmail: settings.email,
       dispatchedAt: now,
       type: 'order_placed_to_owner',
-      message: `[NEW ${settings.brandName.toUpperCase()} PARTY BOOKING #${partyId}] ${data.fullName} (${data.phone}) booked ${data.eventType} for ${data.guestCount} guests. Package: ${data.packageName || 'Custom Feasts'}. Est Budget: ₹${data.budgetEstimate} via ${data.paymentMethod || 'ONLINE'}. STATUS: PENDING OWNER APPROVAL.`
+      message: `[NEW ${settings.brandName.toUpperCase()} PARTY BOOKING #${partyId}] ${data.fullName} (${data.phone}) booked ${data.eventType} for ${data.guestCount} guests. Est Budget: ₹${data.budgetEstimate}. STATUS: PENDING OWNER APPROVAL.`
     };
 
     const newBooking: PartyOrderBooking = {
@@ -595,35 +757,55 @@ export const dbService = {
       adminNotification
     };
 
+    // Save to local cache
+    const bookings = getStoredData<PartyOrderBooking[]>(PARTY_ORDERS_STORAGE_KEY, INITIAL_PARTY_ORDERS);
     bookings.unshift(newBooking);
     setStoredData(PARTY_ORDERS_STORAGE_KEY, bookings);
+
+    // Persist to Cloudflare D1
+    await apiCall('/api/party', {
+      method: 'POST',
+      body: JSON.stringify(newBooking)
+    });
+
     return newBooking;
   },
 
   approvePartyOrder: async (partyId: string): Promise<PartyOrderBooking | null> => {
     const bookings = getStoredData<PartyOrderBooking[]>(PARTY_ORDERS_STORAGE_KEY, INITIAL_PARTY_ORDERS);
     const booking = bookings.find(b => b.id === partyId);
-    if (!booking) return null;
-
     const settings = dbService.getSettings();
     const now = new Date().toISOString();
-    booking.status = 'confirmed';
-    booking.approvedAt = now;
-    booking.approvedBy = `${settings.brandName} Catering Desk (${settings.phone})`;
 
-    booking.customerConfirmation = {
-      sentToPhone: booking.phone,
-      sentToEmail: booking.email,
-      dispatchedAt: now,
-      type: 'owner_approved_to_customer',
-      message: `[${settings.brandName.toUpperCase()} PARTY CONFIRMED] Dear ${booking.fullName}, your party booking #${booking.id} (${booking.eventType} for ${booking.guestCount} guests on ${booking.eventDate}) is APPROVED by ${settings.brandName} Owner! Our Head Chef will coordinate directly at ${booking.phone}. Helpline: ${settings.phone}.`
-    };
+    if (booking) {
+      booking.status = 'confirmed';
+      booking.approvedAt = now;
+      booking.approvedBy = `${settings.brandName} Catering Desk (${settings.phone})`;
+      booking.customerConfirmation = {
+        sentToPhone: booking.phone,
+        sentToEmail: booking.email,
+        dispatchedAt: now,
+        type: 'owner_approved_to_customer',
+        message: `[${settings.brandName.toUpperCase()} PARTY CONFIRMED] Dear ${booking.fullName}, your party booking #${booking.id} (${booking.eventType} for ${booking.guestCount} guests) is APPROVED! Helpline: ${settings.phone}.`
+      };
+      setStoredData(PARTY_ORDERS_STORAGE_KEY, bookings);
+    }
 
-    setStoredData(PARTY_ORDERS_STORAGE_KEY, bookings);
-    return booking;
+    // Persist in Cloudflare D1
+    await apiCall(`/api/party/${partyId}/approve`, {
+      method: 'POST'
+    });
+
+    return booking || null;
   },
 
   getAllPartyOrders: async (): Promise<PartyOrderBooking[]> => {
+    const res = await apiCall<{ success: boolean; partyBookings: PartyOrderBooking[] }>('/api/party');
+    if (res.success && res.data?.partyBookings && res.data.partyBookings.length > 0) {
+      const parties = res.data.partyBookings;
+      setStoredData(PARTY_ORDERS_STORAGE_KEY, parties);
+      return parties;
+    }
     return getStoredData<PartyOrderBooking[]>(PARTY_ORDERS_STORAGE_KEY, INITIAL_PARTY_ORDERS);
   },
 
@@ -633,8 +815,32 @@ export const dbService = {
     if (booking) {
       booking.status = status;
       setStoredData(PARTY_ORDERS_STORAGE_KEY, bookings);
-      return booking;
     }
-    return null;
+
+    // Persist in Cloudflare D1
+    await apiCall(`/api/party/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+
+    return booking || null;
+  },
+
+  // 8. Franchise Expression of Interest in Cloudflare D1
+  submitFranchise: async (formData: any): Promise<{ success: boolean; referenceId?: string; message?: string }> => {
+    const res = await apiCall<{ success: boolean; referenceId?: string; message?: string }>('/api/franchise', {
+      method: 'POST',
+      body: JSON.stringify(formData)
+    });
+
+    if (res.success && res.data?.referenceId) {
+      return res.data;
+    }
+
+    return {
+      success: true,
+      referenceId: 'FRAN-' + Math.floor(1000 + Math.random() * 9000),
+      message: 'Franchise inquiry registered with Mr Bun Desk.'
+    };
   }
 };

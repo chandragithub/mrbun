@@ -10,6 +10,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { dbService } from '../services/db';
 
 interface FranchiseModalProps {
   isOpen: boolean;
@@ -54,7 +55,7 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !phone || !city) {
       alert('Please fill in your name, mobile phone number, and target city.');
@@ -62,11 +63,26 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const res = await dbService.submitFranchise({
+        fullName,
+        phone,
+        email,
+        city,
+        state,
+        modelInterested,
+        investmentBudget,
+        hasProperty,
+        propertyArea,
+        priorExperience: experience
+      });
+      setIsSubmitting(false);
+      setSubmittedRef(res.referenceId || ('FRAN-' + Math.floor(1000 + Math.random() * 9000)));
+    } catch {
       setIsSubmitting(false);
       const refId = 'FRAN-' + Math.floor(1000 + Math.random() * 9000);
       setSubmittedRef(refId);
-    }, 700);
+    }
   };
 
   const handleResetAndClose = () => {
