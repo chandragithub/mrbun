@@ -1,0 +1,15 @@
+name = "mrbun-fast-food"
+compatibility_date = "2024-04-01"
+pages_build_output_dir = "./dist"
+
+# Cloudflare D1 Database Binding for SQLite
+[[d1_databases]]
+binding = "DB"
+database_name = "mrbun-db"
+database_id = "your-d1-database-id-here"
+
+[vars]
+COMPANY_NAME = "Mr Bun"
+CONTACT_PHONE = "9476088111"
+CONTACT_EMAIL = "contact@mrbun.in"
+FSSAI_LICENSE = "22926112000173"
