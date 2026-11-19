@@ -60,13 +60,13 @@ export const ProductCustomizerModal: React.FC<ProductCustomizerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
       <div 
-        className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200"
+        className="relative bg-white w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="relative h-44 bg-amber-100 overflow-hidden">
+        <div className="relative h-28 sm:h-44 bg-amber-100 overflow-hidden shrink-0">
           <img
             src={product.image}
             alt={product.name}

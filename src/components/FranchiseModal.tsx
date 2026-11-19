@@ -76,11 +76,11 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-200"
       onClick={handleResetAndClose}
     >
       <div 
-        className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border-2 border-amber-300 animate-in zoom-in-95 duration-200"
+        className="relative bg-white w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border-2 border-amber-300 animate-in zoom-in-95 duration-200 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         

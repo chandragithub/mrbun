@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { Header } from './components/Header';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { Footer } from './components/Footer';
 import { PageLoader } from './components/PageLoader';
 import { ProductCustomizerModal } from './components/ProductCustomizerModal';
@@ -51,7 +52,7 @@ export const MainApp: React.FC = () => {
       <Header />
 
       {/* Main Routed Content with Lazy Loading Suspense */}
-      <main className="flex-1">
+      <main className="flex-1 pb-16 lg:pb-0">
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route
@@ -129,6 +130,9 @@ export const MainApp: React.FC = () => {
 
       {/* Global Footer */}
       <Footer />
+
+      {/* Mobile Sticky Bottom Navigation Bar (app-like experience) */}
+      <MobileBottomNav />
 
       {/* Global Modals & Drawers */}
       <ProductCustomizerModal

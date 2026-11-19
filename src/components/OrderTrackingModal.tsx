@@ -106,15 +106,15 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
       <div 
-        className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200"
+        className="relative bg-white w-full max-w-2xl max-h-[92vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-5 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
               <Bike className="w-6 h-6 text-amber-200 animate-pulse" />
             </div>
             <div>
@@ -126,14 +126,14 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
                   {order.deliveryType === 'delivery' ? 'Express Delivery' : 'Pickup at Store'}
                 </span>
               </div>
-              <h2 className="text-xl font-black mt-0.5">Live Order Tracker</h2>
+              <h2 className="text-lg sm:text-xl font-black mt-0.5">Live Order Tracker</h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowInvoice(!showInvoice)}
-              className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              className="px-2.5 sm:px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
             >
               <Receipt className="w-3.5 h-3.5" />
               <span>{showInvoice ? 'Hide Receipt' : 'View Invoice'}</span>
@@ -149,7 +149,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ order, o
         </div>
 
         {/* Body content */}
-        <div className="p-6 max-h-[80vh] overflow-y-auto space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
           
           {/* Estimated Delivery Time Banner */}
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 flex items-center justify-between">

@@ -18,29 +18,29 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) => {
   return (
-    <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-amber-50 via-orange-50/40 to-[#FFFDF7] pt-8 pb-16 lg:pt-14 lg:pb-24 border-b border-amber-100/60">
+    <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-amber-50 via-orange-50/40 to-[#FFFDF7] pt-4 pb-10 sm:pt-8 sm:pb-16 lg:pt-14 lg:pb-24 border-b border-amber-100/60">
       
       {/* Decorative background glow circles */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-amber-300/20 via-orange-300/30 to-red-300/20 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute -top-20 -right-20 w-80 h-80 bg-amber-400/15 rounded-full blur-2xl pointer-events-none -z-10" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* Left Text Column (7 cols) */}
-          <div className="lg:col-span-7 text-center lg:text-left space-y-6">
+          <div className="lg:col-span-7 text-center lg:text-left space-y-4 sm:space-y-6">
             
             {/* Top Tag */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300/80 text-amber-950 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300/80 text-amber-950 px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm">
               <span className="flex h-2 w-2 rounded-full bg-red-600 animate-ping" />
               <Flame className="w-4 h-4 text-red-600" />
               <span>Sizzling Fresh Fast Food &amp; Bulk Party Specials</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl xl:text-6xl font-black text-amber-950 tracking-tight leading-[1.15]">
+            <h1 className="text-3xl sm:text-5xl xl:text-6xl font-black text-amber-950 tracking-tight leading-[1.15]">
               Meet <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-orange-600 to-red-600">Mr Bun</span>! <br />
-              <span className="text-3xl sm:text-4xl xl:text-5xl font-extrabold text-slate-800">
+              <span className="text-2xl sm:text-4xl xl:text-5xl font-extrabold text-slate-800">
                 Pizzas, Smash Burgers &amp; Cool Mocktails
               </span>
             </h1>
@@ -98,10 +98,10 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) =
           </div>
 
           {/* Right Mascot & Hero Showcase (5 cols) */}
-          <div className="lg:col-span-5 relative flex justify-center items-center">
+          <div className="lg:col-span-5 relative flex justify-center items-center mt-4 lg:mt-0">
             
             {/* Mascot Graphic Container */}
-            <div className="relative group w-full max-w-md">
+            <div className="relative group w-full max-w-xs sm:max-w-sm lg:max-w-md">
               
               {/* Backing decorative plate */}
               <div className="absolute inset-0 bg-gradient-to-tr from-amber-400/30 to-red-400/20 rounded-3xl blur-2xl transform group-hover:scale-105 transition-transform duration-500" />

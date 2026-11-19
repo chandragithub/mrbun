@@ -62,13 +62,13 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
       <div 
-        className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200"
+        className="relative bg-white w-full max-w-md max-h-[92vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-6 text-white text-center relative">
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 sm:p-6 text-white text-center relative shrink-0">
           <button
             onClick={closeAuthModal}
             className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full transition"
@@ -80,15 +80,15 @@ export const AuthModal: React.FC = () => {
           <img 
             src="/logo.png" 
             alt="Mr Bun Logo" 
-            className="w-16 h-16 object-contain mx-auto bg-white rounded-2xl p-1 shadow-md mb-2"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain mx-auto bg-white rounded-2xl p-1 shadow-md mb-2"
           />
-          <h2 className="text-2xl font-black">Welcome to Mr Bun</h2>
-          <p className="text-xs text-amber-100 mt-1">
+          <h2 className="text-xl sm:text-2xl font-black">Welcome to Mr Bun</h2>
+          <p className="text-xs text-amber-100 mt-0.5">
             Sign in to track orders, save party menus &amp; enjoy exclusive discounts!
           </p>
 
           {/* Mode Switcher Tabs */}
-          <div className="flex bg-black/20 p-1 rounded-xl mt-4 max-w-xs mx-auto text-xs font-bold">
+          <div className="flex bg-black/20 p-1 rounded-xl mt-3 max-w-xs mx-auto text-xs font-bold">
             <button
               type="button"
               onClick={() => { setMode('login'); setError(null); }}
@@ -111,7 +111,7 @@ export const AuthModal: React.FC = () => {
         </div>
 
         {/* Form Body */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-xl">
               {error}

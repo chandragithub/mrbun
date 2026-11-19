@@ -93,15 +93,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
       <div 
-        className="relative bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200"
+        className="relative bg-white w-full max-w-xl max-h-[92vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-200 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-5 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-xl font-black">Checkout &amp; Delivery Details</h2>
+            <h2 className="text-lg sm:text-xl font-black">Checkout &amp; Delivery Details</h2>
             <p className="text-xs text-amber-100">Mr Bun Fast Food • FSSAI: 22926112000173</p>
           </div>
           <button
@@ -114,7 +114,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handlePlaceOrder} className="p-6 max-h-[80vh] overflow-y-auto space-y-5">
+        <form onSubmit={handlePlaceOrder} className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
           
           {/* Customer Info */}
           <div>
