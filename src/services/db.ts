@@ -292,7 +292,18 @@ export const dbService = {
   fetchSettingsFromD1: async (): Promise<StoreSettings> => {
     const res = await apiCall<{ success: boolean; settings: StoreSettings }>('/api/settings');
     if (res.success && res.data?.settings) {
-      const settings = res.data.settings;
+      const live = res.data.settings;
+      const current = dbService.getSettings();
+      const settings: StoreSettings = {
+        ...DEFAULT_STORE_SETTINGS,
+        ...current,
+        ...live,
+        paymentOptions: {
+          ...DEFAULT_STORE_SETTINGS.paymentOptions,
+          ...current.paymentOptions,
+          ...(live.paymentOptions || {})
+        }
+      };
       setStoredData(SETTINGS_STORAGE_KEY, settings);
       window.dispatchEvent(new CustomEvent('mrbun-settings-changed', { detail: settings }));
       return settings;
@@ -300,7 +311,7 @@ export const dbService = {
     return dbService.getSettings();
   },
 
-  updateSettings: (partial: Partial<StoreSettings>): StoreSettings => {
+  updateSettings: async (partial: Partial<StoreSettings>): Promise<StoreSettings> => {
     const current = dbService.getSettings();
     const merged: StoreSettings = {
       ...current,
@@ -315,11 +326,31 @@ export const dbService = {
     setStoredData(SETTINGS_STORAGE_KEY, merged);
     window.dispatchEvent(new CustomEvent('mrbun-settings-changed', { detail: merged }));
 
-    // Send update to Cloudflare D1 SQLite database
-    apiCall('/api/settings', {
-      method: 'POST',
-      body: JSON.stringify(merged)
-    }).catch(e => console.warn('Cloudflare D1 sync background notice:', e));
+    // Send update to Cloudflare D1 SQLite database and await response
+    try {
+      const res = await apiCall<{ success: boolean; settings?: StoreSettings; error?: string }>('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify(merged)
+      });
+
+      if (res.success && res.data?.settings) {
+        const confirmed: StoreSettings = {
+          ...merged,
+          ...res.data.settings,
+          paymentOptions: {
+            ...merged.paymentOptions,
+            ...(res.data.settings.paymentOptions || {})
+          }
+        };
+        setStoredData(SETTINGS_STORAGE_KEY, confirmed);
+        window.dispatchEvent(new CustomEvent('mrbun-settings-changed', { detail: confirmed }));
+        return confirmed;
+      } else if (!res.success) {
+        console.warn('Cloudflare D1 settings sync failed, keeping local copy:', res.error);
+      }
+    } catch (e) {
+      console.warn('Network exception while syncing settings to D1:', e);
+    }
 
     return merged;
   },

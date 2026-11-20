@@ -482,7 +482,7 @@ export default {
                 about_story, about_hero_title, about_hero_description,
                 fssai_license, msg91_auth_key, msg91_template_id, payment_options_json, updated_at
               )
-              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
               ON CONFLICT(id) DO UPDATE SET
                 brand_name = excluded.brand_name,
                 tagline = excluded.tagline,

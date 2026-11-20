@@ -120,7 +120,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [loadData]);
 
   const updateSettings = async (partial: Partial<StoreSettings>): Promise<StoreSettings> => {
-    const updated = dbService.updateSettings(partial);
+    const updated = await dbService.updateSettings(partial);
     setSettings(updated);
     return updated;
   };

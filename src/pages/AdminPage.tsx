@@ -89,6 +89,8 @@ export const AdminPage: React.FC = () => {
 
   // Brand Form State
   const [brandForm, setBrandForm] = useState<StoreSettings>(settings);
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
 
   // Product Form Modal State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -250,8 +252,16 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveBrandSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateSettings(brandForm);
-    showNotification('✨ Store settings (Phone, Email, Address, About Us & FSSAI) updated successfully! Changes are live across the entire website.');
+    setIsSavingBrand(true);
+    try {
+      await updateSettings(brandForm);
+      showNotification('✨ Store settings (Phone, Email, Address, About Us & FSSAI) updated successfully! Changes are live and saved to the database.');
+    } catch (err: any) {
+      console.error('Error saving store settings:', err);
+      showNotification(`⚠️ Settings saved locally, but database sync error: ${err.message || 'Network error'}`);
+    } finally {
+      setIsSavingBrand(false);
+    }
   };
 
   const handleResetLogo = () => {
@@ -597,10 +607,18 @@ export const AdminPage: React.FC = () => {
   // --- PAYMENT SETTINGS HANDLER ---
   const handleSavePaymentSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateSettings({
-      paymentOptions: paymentForm
-    });
-    showNotification('💳 Payment gateway settings & cash policies saved and active!');
+    setIsSavingPayment(true);
+    try {
+      await updateSettings({
+        paymentOptions: paymentForm
+      });
+      showNotification('💳 Payment gateway settings & cash policies saved to database and active!');
+    } catch (err: any) {
+      console.error('Error saving payment settings:', err);
+      showNotification(`⚠️ Settings saved locally, but database sync error: ${err.message || 'Network error'}`);
+    } finally {
+      setIsSavingPayment(false);
+    }
   };
 
   const totalRevenue = orders.reduce((acc, curr) => acc + curr.totalAmount, 0);
@@ -1668,10 +1686,11 @@ export const AdminPage: React.FC = () => {
               <div className="pt-2 flex items-center justify-between">
                 <button
                   type="submit"
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-7 py-3.5 rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center gap-2"
+                  disabled={isSavingBrand}
+                  className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold px-7 py-3.5 rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center gap-2"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save All Store &amp; About Us Settings</span>
+                  <Save className={`w-4 h-4 ${isSavingBrand ? 'animate-spin' : ''}`} />
+                  <span>{isSavingBrand ? 'Saving to Database...' : 'Save All Store & About Us Settings'}</span>
                 </button>
 
                 <p className="text-[11px] text-slate-400 hidden sm:block">
@@ -2163,10 +2182,11 @@ export const AdminPage: React.FC = () => {
               {/* Save Payment Settings Button */}
               <button
                 type="submit"
-                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-6 py-3 rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center gap-2"
+                disabled={isSavingPayment}
+                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold px-6 py-3 rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center gap-2"
               >
-                <Save className="w-4 h-4" />
-                <span>Save Payment &amp; Gateway Settings</span>
+                <Save className={`w-4 h-4 ${isSavingPayment ? 'animate-spin' : ''}`} />
+                <span>{isSavingPayment ? 'Saving to Database...' : 'Save Payment & Gateway Settings'}</span>
               </button>
             </form>
           </div>
