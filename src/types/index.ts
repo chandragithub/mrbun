@@ -36,6 +36,8 @@ export interface CartItem {
   totalPrice: number;
 }
 
+export type UserRole = 'owner' | 'manager' | 'waiter' | 'delivery_partner' | 'cleaner' | 'admin' | 'customer';
+
 export interface User {
   id: string;
   name: string;
@@ -43,7 +45,10 @@ export interface User {
   phone: string;
   address?: string;
   avatarUrl?: string;
-  role: 'customer' | 'admin';
+  role: UserRole;
+  assignedOutlet?: string;
+  status?: 'active' | 'inactive' | 'on_leave';
+  createdAt?: string;
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'baking' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'received';

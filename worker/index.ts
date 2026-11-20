@@ -387,6 +387,16 @@ async function ensureTables(db: any) {
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_auth_key TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_template_id TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE users ADD COLUMN assigned_outlet TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE users ADD COLUMN status TEXT DEFAULT "active";'); } catch {}
+
+    // Seed master administrator account if it does not exist
+    try {
+      await db.prepare(`
+        INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, address, assigned_outlet, status)
+        VALUES ('usr-admin', 'Mr Bun Master Admin', 'admin@mrbun.in', '9476088111', 'admin123', 'admin', 'Central Kitchen & HQ', 'All Outlets', 'active')
+      `).run();
+    } catch {}
   } catch (e) {
     console.error('Error ensuring tables:', e);
   }
@@ -1461,32 +1471,19 @@ export default {
           }
         }
 
-        // Demo fallback for owner and foodie
+        // Master Admin fallback authentication
         if ((normalized === 'admin@mrbun.in' || cleanPhone === '9476088111') && password === 'admin123') {
           return jsonResponse({
             success: true,
             user: {
               id: 'usr-admin',
-              name: 'Mr Bun Owner',
+              name: 'Mr Bun Master Admin',
               email: 'admin@mrbun.in',
               phone: '9476088111',
               avatarUrl: '/logo.png',
-              role: 'admin'
-            }
-          });
-        }
-
-        if ((normalized === 'rahul@example.com' || cleanPhone === '9876543210') && password === 'foodie123') {
-          return jsonResponse({
-            success: true,
-            user: {
-              id: 'usr-foodie',
-              name: 'Rahul Sharma',
-              email: 'rahul@example.com',
-              phone: '9876543210',
-              address: 'Flat 402, Green Glen Heights, Park Street',
-              avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-              role: 'customer'
+              role: 'admin',
+              assignedOutlet: 'All Outlets',
+              status: 'active'
             }
           });
         }
@@ -1805,6 +1802,176 @@ export default {
             user: updatedUser,
             message: 'User settings and profile updated successfully in Cloudflare D1!'
           });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+    }
+
+    // 8g. ADMIN TEAM & USER ROLE MANAGEMENT API (Owner, Manager, Waiter, Delivery Partner, Cleaner, etc.)
+    if (url.pathname === '/api/users' || url.pathname.startsWith('/api/users/')) {
+      await ensureTables(env.DB);
+
+      // GET /api/users - Fetch all users and staff
+      if (request.method === 'GET' && url.pathname === '/api/users') {
+        try {
+          if (env.DB) {
+            const { results } = await env.DB.prepare(`
+              SELECT id, name, email, phone, address, avatar_url, role, assigned_outlet, status, created_at
+              FROM users
+              ORDER BY created_at DESC
+            `).all();
+
+            const mapped = (results || []).map((u: any) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone,
+              address: u.address || '',
+              avatarUrl: u.avatar_url || '',
+              role: u.role || 'customer',
+              assignedOutlet: u.assigned_outlet || 'All Outlets',
+              status: u.status || 'active',
+              createdAt: u.created_at
+            }));
+
+            return jsonResponse({ success: true, users: mapped });
+          }
+          return jsonResponse({ success: true, users: [] });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
+      // POST /api/users - Create new user or staff member with assigned role
+      if (request.method === 'POST' && url.pathname === '/api/users') {
+        try {
+          const body: any = await request.json();
+          const name = (body.name || '').trim();
+          const email = (body.email || '').trim().toLowerCase();
+          const rawPhone = (body.phone || '').trim();
+          const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+          const password = (body.password || 'mrbun123').trim();
+          const role = (body.role || 'customer').trim();
+          const assignedOutlet = (body.assignedOutlet || 'All Outlets').trim();
+          const address = (body.address || '').trim();
+          const status = (body.status || 'active').trim();
+          const avatarUrl = (body.avatarUrl || '').trim();
+
+          if (!name || !email) {
+            return jsonResponse({ success: false, error: 'Full name and email are required.' }, 400);
+          }
+
+          const userId = 'usr-' + Math.random().toString(36).substring(2, 9);
+          if (env.DB) {
+            // Check if email or phone already exists
+            const existing = await env.DB.prepare('SELECT id FROM users WHERE LOWER(email) = ? OR (phone = ? AND phone != "") LIMIT 1')
+              .bind(email, cleanPhone).first();
+            if (existing) {
+              return jsonResponse({ success: false, error: 'A user with this email or phone number already exists.' }, 400);
+            }
+
+            await env.DB.prepare(`
+              INSERT INTO users (id, name, email, phone, password_hash, address, avatar_url, role, assigned_outlet, status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(userId, name, email, cleanPhone, password, address, avatarUrl, role, assignedOutlet, status).run();
+          }
+
+          const created = {
+            id: userId,
+            name,
+            email,
+            phone: cleanPhone,
+            address,
+            avatarUrl,
+            role,
+            assignedOutlet,
+            status,
+            createdAt: new Date().toISOString()
+          };
+
+          return jsonResponse({ success: true, user: created, message: `Staff member created with role: ${role}` }, 201);
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
+      // PUT /api/users/:id - Update user details, role or password
+      if (request.method === 'PUT' && url.pathname.startsWith('/api/users/')) {
+        try {
+          const id = url.pathname.replace('/api/users/', '').trim();
+          const body: any = await request.json();
+
+          if (!id) {
+            return jsonResponse({ success: false, error: 'User ID is required.' }, 400);
+          }
+
+          if (env.DB) {
+            const existing: any = await env.DB.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(id).first();
+            if (!existing) {
+              return jsonResponse({ success: false, error: 'User not found.' }, 404);
+            }
+
+            const updatedName = body.name !== undefined ? body.name.trim() : existing.name;
+            const updatedEmail = body.email !== undefined ? body.email.trim().toLowerCase() : existing.email;
+            const updatedPhone = body.phone !== undefined ? body.phone.replace(/\D/g, '').slice(-10) : existing.phone;
+            const updatedRole = body.role !== undefined ? body.role : existing.role;
+            const updatedOutlet = body.assignedOutlet !== undefined ? body.assignedOutlet : existing.assigned_outlet;
+            const updatedStatus = body.status !== undefined ? body.status : existing.status;
+            const updatedAddress = body.address !== undefined ? body.address : existing.address;
+            const updatedPassword = body.password ? body.password.trim() : existing.password_hash;
+
+            await env.DB.prepare(`
+              UPDATE users 
+              SET name = ?, email = ?, phone = ?, role = ?, assigned_outlet = ?, status = ?, address = ?, password_hash = ?
+              WHERE id = ?
+            `).bind(
+              updatedName,
+              updatedEmail,
+              updatedPhone,
+              updatedRole,
+              updatedOutlet,
+              updatedStatus,
+              updatedAddress,
+              updatedPassword,
+              id
+            ).run();
+
+            return jsonResponse({
+              success: true,
+              user: {
+                id,
+                name: updatedName,
+                email: updatedEmail,
+                phone: updatedPhone,
+                role: updatedRole,
+                assignedOutlet: updatedOutlet,
+                status: updatedStatus,
+                address: updatedAddress
+              },
+              message: 'Staff / User details updated successfully.'
+            });
+          }
+
+          return jsonResponse({ success: true, message: 'Updated locally.' });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
+      // DELETE /api/users/:id - Delete staff member
+      if (request.method === 'DELETE' && url.pathname.startsWith('/api/users/')) {
+        try {
+          const id = url.pathname.replace('/api/users/', '').trim();
+          if (id === 'usr-admin') {
+            return jsonResponse({ success: false, error: 'Cannot delete the master administrator account.' }, 403);
+          }
+
+          if (env.DB && id) {
+            await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+          }
+
+          return jsonResponse({ success: true, message: 'User / Staff removed successfully.' });
         } catch (err: any) {
           return jsonResponse({ success: false, error: err.message }, 500);
         }

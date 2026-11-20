@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS party_packages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. Registered Users & Admins
+-- 7. Registered Users, Staff & Admins
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -149,9 +149,15 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     address TEXT,
     avatar_url TEXT,
-    role TEXT DEFAULT 'customer', -- 'customer' or 'admin'
+    role TEXT DEFAULT 'customer', -- 'owner', 'manager', 'waiter', 'delivery_partner', 'cleaner', 'admin', 'customer'
+    assigned_outlet TEXT,
+    status TEXT DEFAULT 'active', -- 'active', 'inactive', 'on_leave'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Seed Master Administrator Account
+INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, address, assigned_outlet, status) 
+VALUES ('usr-admin', 'Mr Bun Master Admin', 'admin@mrbun.in', '9476088111', 'admin123', 'admin', 'Central Kitchen & HQ', 'All Outlets', 'active');
 
 -- 8. Franchise Expressions of Interest
 CREATE TABLE IF NOT EXISTS franchise_applications (

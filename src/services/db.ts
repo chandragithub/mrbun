@@ -131,19 +131,13 @@ export const INITIAL_OUTLETS: Outlet[] = [
 export const INITIAL_USERS: User[] = [
   {
     id: 'usr-admin',
-    name: 'Mr Bun Owner',
+    name: 'Mr Bun Master Admin',
     email: 'admin@mrbun.in',
     phone: '9476088111',
     role: 'admin',
+    assignedOutlet: 'All Outlets',
+    status: 'active',
     address: 'Mr Bun Flagship Kitchen, Central Plaza'
-  },
-  {
-    id: 'usr-demo-1',
-    name: 'Rahul Sharma',
-    email: 'rahul.sharma@example.com',
-    phone: '9876543210',
-    role: 'customer',
-    address: 'Flat 402, Green Glen Heights, Park Street'
   }
 ];
 
@@ -617,31 +611,20 @@ export const dbService = {
       return { success: true, user: res.data.user };
     }
 
-    // Local fallback for offline / demo owner
+    // Fallback for Master Administrator
     if ((raw.toLowerCase() === 'admin@mrbun.in' || cleanPhone === '9476088111') && (password === 'admin123' || !password)) {
       const adminUser: User = {
         id: 'usr-admin',
-        name: 'Mr Bun Owner',
+        name: 'Mr Bun Master Admin',
         email: 'admin@mrbun.in',
         phone: '9476088111',
         role: 'admin',
+        assignedOutlet: 'All Outlets',
+        status: 'active',
         address: 'Mr Bun Central Kitchen'
       };
       setStoredData(CURRENT_USER_KEY, adminUser);
       return { success: true, user: adminUser };
-    }
-
-    if ((raw.toLowerCase() === 'rahul@example.com' || cleanPhone === '9876543210') && (password === 'foodie123' || !password)) {
-      const foodieUser: User = {
-        id: 'usr-foodie',
-        name: 'Rahul Sharma',
-        email: 'rahul@example.com',
-        phone: '9876543210',
-        address: 'Flat 402, Green Glen Heights, Park Street',
-        role: 'customer'
-      };
-      setStoredData(CURRENT_USER_KEY, foodieUser);
-      return { success: true, user: foodieUser };
     }
 
     const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
@@ -652,6 +635,67 @@ export const dbService = {
     }
 
     return { success: false, error: res.data?.error || res.error || 'Invalid credentials.' };
+  },
+
+  // 5b. Team & Staff Role Management in Cloudflare D1
+  getAllUsers: async (): Promise<User[]> => {
+    const res = await apiCall<{ success: boolean; users: User[] }>('/api/users');
+    if (res.success && res.data?.users && res.data.users.length > 0) {
+      setStoredData(USERS_STORAGE_KEY, res.data.users);
+      return res.data.users;
+    }
+    return getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
+  },
+
+  createStaffUser: async (userData: Partial<User> & { password?: string }): Promise<User> => {
+    const res = await apiCall<{ success: boolean; user: User; message?: string }>('/api/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+    if (res.success && res.data?.user) {
+      const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
+      users.unshift(res.data.user);
+      setStoredData(USERS_STORAGE_KEY, users);
+      return res.data.user;
+    }
+    // Local fallback
+    const newUser: User = {
+      id: 'usr-staff-' + Date.now(),
+      name: userData.name || 'Staff Member',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      role: userData.role || 'manager',
+      assignedOutlet: userData.assignedOutlet || 'All Outlets',
+      status: userData.status || 'active',
+      address: userData.address || ''
+    };
+    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
+    users.unshift(newUser);
+    setStoredData(USERS_STORAGE_KEY, users);
+    return newUser;
+  },
+
+  updateStaffUser: async (id: string, userData: Partial<User> & { password?: string }): Promise<User> => {
+    const res = await apiCall<{ success: boolean; user: User }>('/api/users/' + id, {
+      method: 'PUT',
+      body: JSON.stringify(userData)
+    });
+    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
+    const idx = users.findIndex(u => u.id === id);
+    const updatedUser = res.success && res.data?.user ? res.data.user : { ...(users[idx] || {}), ...userData } as User;
+    if (idx >= 0) {
+      users[idx] = updatedUser;
+      setStoredData(USERS_STORAGE_KEY, users);
+    }
+    return updatedUser;
+  },
+
+  deleteStaffUser: async (id: string): Promise<boolean> => {
+    await apiCall('/api/users/' + id, { method: 'DELETE' });
+    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
+    const filtered = users.filter(u => u.id !== id);
+    setStoredData(USERS_STORAGE_KEY, filtered);
+    return true;
   },
 
   loginWithOtp: async (phone: string, otp: string): Promise<{ success: boolean; user?: User; error?: string }> => {

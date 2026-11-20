@@ -39,7 +39,12 @@ import {
   ShieldCheck,
   Eye,
   X,
-  ArrowRight
+  ArrowRight,
+  Users,
+  UserPlus,
+  Crown,
+  Briefcase,
+  Utensils
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -53,7 +58,9 @@ import {
   StoreOffer, 
   Outlet, 
   StoreSettings,
-  PartyPackage
+  PartyPackage,
+  User,
+  UserRole
 } from '../types';
 
 export const AdminPage: React.FC = () => {
@@ -75,13 +82,39 @@ export const AdminPage: React.FC = () => {
     deletePackage
   } = useSettings();
   
-  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'db'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'team' | 'db'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [parties, setParties] = useState<PartyOrderBooking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Staff & Team Management State
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<User | null>(null);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState<string>('all');
+  const [staffForm, setStaffForm] = useState<{
+    name: string;
+    email: string;
+    phone: string;
+    password?: string;
+    role: UserRole;
+    assignedOutlet: string;
+    status: 'active' | 'inactive' | 'on_leave';
+    address: string;
+  }>({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'manager',
+    assignedOutlet: 'All Outlets',
+    status: 'active',
+    address: ''
+  });
 
   // Quick login state if user is not admin
   const [adminPassword, setAdminPassword] = useState('');
@@ -181,6 +214,8 @@ export const AdminPage: React.FC = () => {
       setOrders(allOrders);
       const allParties = await dbService.getAllPartyOrders();
       setParties(allParties);
+      const allUsers = await dbService.getAllUsers();
+      setUsersList(allUsers);
     } catch (e) {
       console.error(e);
     } finally {
@@ -621,6 +656,73 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // --- STAFF & TEAM ROLE HANDLERS ---
+  const handleOpenAddStaff = () => {
+    setEditingStaff(null);
+    setStaffForm({
+      name: '',
+      email: '',
+      phone: '',
+      password: 'staff' + Math.floor(1000 + Math.random() * 9000),
+      role: 'manager',
+      assignedOutlet: outlets[0]?.name || 'All Outlets',
+      status: 'active',
+      address: ''
+    });
+    setIsStaffModalOpen(true);
+  };
+
+  const handleOpenEditStaff = (st: User) => {
+    setEditingStaff(st);
+    setStaffForm({
+      name: st.name || '',
+      email: st.email || '',
+      phone: st.phone || '',
+      password: '',
+      role: st.role || 'manager',
+      assignedOutlet: st.assignedOutlet || 'All Outlets',
+      status: st.status || 'active',
+      address: st.address || ''
+    });
+    setIsStaffModalOpen(true);
+  };
+
+  const handleSaveStaffForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffForm.name.trim() || !staffForm.email.trim()) {
+      alert('Please fill in staff name and email address.');
+      return;
+    }
+
+    try {
+      if (editingStaff) {
+        await dbService.updateStaffUser(editingStaff.id, staffForm);
+        showNotification(`✓ Staff member "${staffForm.name}" updated successfully! Role: ${staffForm.role.toUpperCase()}`);
+      } else {
+        await dbService.createStaffUser(staffForm);
+        showNotification(`🎉 New staff member "${staffForm.name}" created with role: ${staffForm.role.toUpperCase()}`);
+      }
+      setIsStaffModalOpen(false);
+      const allUsers = await dbService.getAllUsers();
+      setUsersList(allUsers);
+    } catch (err: any) {
+      alert('Error saving staff member: ' + (err?.message || 'Please check input details.'));
+    }
+  };
+
+  const handleDeleteStaff = async (id: string, name: string) => {
+    if (id === 'usr-admin') {
+      alert('The Master Administrator account cannot be deleted.');
+      return;
+    }
+    if (confirm(`Are you sure you want to remove staff member "${name}"?`)) {
+      await dbService.deleteStaffUser(id);
+      showNotification(`Staff member "${name}" removed successfully.`);
+      const allUsers = await dbService.getAllUsers();
+      setUsersList(allUsers);
+    }
+  };
+
   const totalRevenue = orders.reduce((acc, curr) => acc + curr.totalAmount, 0);
   const pendingOrders = orders.filter((o) => o.orderStatus === 'pending');
   const pendingParties = parties.filter((p) => p.status === 'pending');
@@ -665,13 +767,13 @@ export const AdminPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Passcode
+                Admin Password
               </label>
               <input
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter password (default: admin123)"
+                placeholder="Enter admin password"
                 className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
                 required
               />
@@ -684,18 +786,6 @@ export const AdminPage: React.FC = () => {
               Unlock Owner Dashboard
             </button>
           </form>
-
-          <div className="pt-2 border-t border-slate-100 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setAdminPassword('admin123');
-              }}
-              className="text-[11px] font-bold text-amber-700 hover:underline"
-            >
-              Fill Demo Owner Password (admin123)
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -961,6 +1051,19 @@ export const AdminPage: React.FC = () => {
           >
             <CreditCard className="w-4 h-4" />
             <span>6. Cash &amp; Payments</span>
+          </button>
+
+          {/* 7. Team & Staff Role Assignment */}
+          <button
+            onClick={() => setActiveTab('team')}
+            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              activeTab === 'team'
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>7. Team &amp; Staff ({usersList.length})</span>
           </button>
 
           {/* Edge Architecture */}
@@ -2192,6 +2295,218 @@ export const AdminPage: React.FC = () => {
           </div>
         )}
 
+        {/* TAB 7: TEAM & STAFF ROLE MANAGEMENT */}
+        {activeTab === 'team' && (
+          <div className="p-4 sm:p-6 space-y-6">
+            
+            {/* Header Toolbar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 font-display flex items-center gap-2">
+                  <Users className="w-6 h-6 text-amber-600" />
+                  <span>Team &amp; Staff Role Management</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Create accounts and assign operational roles: Owner, Manager, Waiter, Delivery Partner, Cleaner, or Admin.
+                </p>
+              </div>
+
+              <button
+                onClick={handleOpenAddStaff}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs transition shadow-md flex items-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Create Staff Member</span>
+              </button>
+            </div>
+
+            {/* Quick Role Stats Counter */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { role: 'owner', label: 'Owners', count: usersList.filter(u => u.role === 'owner').length, color: 'bg-amber-50 text-amber-900 border-amber-200' },
+                { role: 'manager', label: 'Managers', count: usersList.filter(u => u.role === 'manager').length, color: 'bg-purple-50 text-purple-900 border-purple-200' },
+                { role: 'waiter', label: 'Waiters', count: usersList.filter(u => u.role === 'waiter').length, color: 'bg-blue-50 text-blue-900 border-blue-200' },
+                { role: 'delivery_partner', label: 'Delivery', count: usersList.filter(u => u.role === 'delivery_partner').length, color: 'bg-emerald-50 text-emerald-900 border-emerald-200' },
+                { role: 'cleaner', label: 'Cleaners', count: usersList.filter(u => u.role === 'cleaner').length, color: 'bg-teal-50 text-teal-900 border-teal-200' },
+                { role: 'admin', label: 'Admins', count: usersList.filter(u => u.role === 'admin').length, color: 'bg-slate-900 text-amber-300 border-slate-700' }
+              ].map(stat => (
+                <div 
+                  key={stat.role} 
+                  onClick={() => setStaffRoleFilter(stat.role === staffRoleFilter ? 'all' : stat.role)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition transform hover:scale-102 ${stat.color} ${staffRoleFilter === stat.role ? 'ring-2 ring-amber-500' : ''}`}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-75">{stat.label}</p>
+                  <p className="text-xl font-black mt-0.5">{stat.count}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={staffSearch}
+                  onChange={(e) => setStaffSearch(e.target.value)}
+                  placeholder="Search staff by name, email, phone..."
+                  className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs text-slate-500 font-semibold shrink-0">Filter Role:</span>
+                <select
+                  value={staffRoleFilter}
+                  onChange={(e) => setStaffRoleFilter(e.target.value)}
+                  className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold"
+                >
+                  <option value="all">All Roles ({usersList.length})</option>
+                  <option value="owner">👑 Owner ({usersList.filter(u => u.role === 'owner').length})</option>
+                  <option value="manager">🎖️ Manager ({usersList.filter(u => u.role === 'manager').length})</option>
+                  <option value="waiter">🍽️ Waiter ({usersList.filter(u => u.role === 'waiter').length})</option>
+                  <option value="delivery_partner">🛵 Delivery Partner ({usersList.filter(u => u.role === 'delivery_partner').length})</option>
+                  <option value="cleaner">🧹 Cleaner ({usersList.filter(u => u.role === 'cleaner').length})</option>
+                  <option value="admin">🛡️ Master Admin ({usersList.filter(u => u.role === 'admin').length})</option>
+                  <option value="customer">👤 Customer ({usersList.filter(u => u.role === 'customer').length})</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Staff List Cards */}
+            {usersList.filter(u => {
+              if (staffRoleFilter !== 'all' && u.role !== staffRoleFilter) return false;
+              if (staffSearch.trim()) {
+                const q = staffSearch.toLowerCase();
+                return (
+                  u.name.toLowerCase().includes(q) ||
+                  u.email.toLowerCase().includes(q) ||
+                  (u.phone && u.phone.includes(q)) ||
+                  (u.assignedOutlet && u.assignedOutlet.toLowerCase().includes(q))
+                );
+              }
+              return true;
+            }).length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300 space-y-2">
+                <Users className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">No staff members found.</p>
+                <p className="text-xs text-slate-400">Click &quot;+ Create Staff Member&quot; to assign your first role.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {usersList.filter(u => {
+                  if (staffRoleFilter !== 'all' && u.role !== staffRoleFilter) return false;
+                  if (staffSearch.trim()) {
+                    const q = staffSearch.toLowerCase();
+                    return (
+                      u.name.toLowerCase().includes(q) ||
+                      u.email.toLowerCase().includes(q) ||
+                      (u.phone && u.phone.includes(q)) ||
+                      (u.assignedOutlet && u.assignedOutlet.toLowerCase().includes(q))
+                    );
+                  }
+                  return true;
+                }).map(st => {
+                  const getBadge = (r: UserRole) => {
+                    switch (r) {
+                      case 'owner': return { label: '👑 Owner / Franchisee', color: 'bg-amber-100 text-amber-900 border-amber-300' };
+                      case 'manager': return { label: '🎖️ Store Manager', color: 'bg-purple-100 text-purple-900 border-purple-300' };
+                      case 'waiter': return { label: '🍽️ Dine-in Waiter', color: 'bg-blue-100 text-blue-900 border-blue-300' };
+                      case 'delivery_partner': return { label: '🛵 Delivery Partner', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
+                      case 'cleaner': return { label: '🧹 Kitchen Cleaner', color: 'bg-teal-100 text-teal-900 border-teal-300' };
+                      case 'admin': return { label: '🛡️ Master Admin', color: 'bg-slate-900 text-amber-300 border-slate-700' };
+                      default: return { label: '👤 Foodie Customer', color: 'bg-slate-100 text-slate-700 border-slate-200' };
+                    }
+                  };
+                  const badge = getBadge(st.role);
+
+                  const getStatusColor = (s?: string) => {
+                    if (s === 'inactive') return 'bg-red-100 text-red-800 border-red-200';
+                    if (s === 'on_leave') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                  };
+
+                  return (
+                    <div 
+                      key={st.id}
+                      className="bg-white rounded-3xl p-5 border border-slate-200 hover:border-amber-300 hover:shadow-md transition space-y-3.5 relative"
+                    >
+                      {/* Top Row: Avatar & Name */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl overflow-hidden bg-amber-500 text-white flex items-center justify-center font-black text-sm uppercase shrink-0 shadow-xs">
+                            {st.avatarUrl ? (
+                              <img src={st.avatarUrl} alt={st.name} className="w-full h-full object-cover" />
+                            ) : (
+                              st.name ? st.name[0] : 'U'
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900 leading-tight">{st.name}</h3>
+                            <p className="text-[11px] text-slate-400 truncate max-w-[170px]">{st.email}</p>
+                            <p className="text-[11px] font-mono text-slate-600 font-semibold">📞 +91 {st.phone || '9476088111'}</p>
+                          </div>
+                        </div>
+
+                        {/* Status */}
+                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${getStatusColor(st.status)}`}>
+                          {st.status || 'active'}
+                        </span>
+                      </div>
+
+                      {/* Role & Outlet Tags */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${badge.color}`}>
+                          {badge.label}
+                        </span>
+                        <span className="text-[10px] bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md border border-slate-200">
+                          📍 {st.assignedOutlet || 'All Outlets'}
+                        </span>
+                      </div>
+
+                      {st.address && (
+                        <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl line-clamp-2">
+                          {st.address}
+                        </p>
+                      )}
+
+                      {/* Actions */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-slate-400">
+                          ID: {st.id.slice(0, 10)}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditStaff(st)}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-amber-200"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+
+                          {st.id !== 'usr-admin' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteStaff(st.id, st.name)}
+                              className="bg-red-50 hover:bg-red-100 text-red-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-red-200"
+                              title="Delete staff member"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+          </div>
+        )}
+
         {/* TAB 8: CLOUDFLARE D1 ARCHITECTURE */}
         {activeTab === 'db' && (
           <div className="p-6 space-y-4 font-mono text-xs">
@@ -3073,6 +3388,176 @@ export const AdminPage: React.FC = () => {
                 </button>
               </div>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT STAFF & ROLE ASSIGNMENT MODAL --- */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+          <div className="bg-white max-w-lg w-full rounded-3xl p-6 shadow-2xl border border-amber-200 space-y-4 my-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 font-display">
+                    {editingStaff ? 'Edit Staff Member & Role' : 'Create Staff Member & Assign Role'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">Owner, Manager, Waiter, Delivery Partner, Cleaner, Admin</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsStaffModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStaffForm} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Full Name */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Staff Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="text"
+                    value={staffForm.name}
+                    onChange={(e) => setStaffForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. Ramesh Verma"
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="email"
+                    value={staffForm.email}
+                    onChange={(e) => setStaffForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="e.g. ramesh@mrbun.in"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {/* Phone Number */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Mobile Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-slate-400 font-bold text-xs pointer-events-none select-none">
+                      +91
+                    </span>
+                    <input 
+                      type="tel"
+                      value={staffForm.phone}
+                      onChange={(e) => setStaffForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                      placeholder="9876543210"
+                      className="w-full text-xs pl-12 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 font-mono font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Assign Role */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Assign Operational Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={staffForm.role}
+                    onChange={(e) => setStaffForm(prev => ({ ...prev, role: e.target.value as UserRole }))}
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border-2 border-amber-300 focus:outline-none focus:border-amber-500 bg-amber-50/40"
+                    required
+                  >
+                    <option value="owner">👑 Owner / Franchisee (Full Business, Revenue &amp; Outlets)</option>
+                    <option value="manager">🎖️ Restaurant / Kitchen Manager (Menu, Orders &amp; Staff)</option>
+                    <option value="waiter">🍽️ Dine-in Waiter / Captain (Order Taking &amp; Table Serving)</option>
+                    <option value="delivery_partner">🛵 Delivery Partner (Food Courier &amp; Home Delivery)</option>
+                    <option value="cleaner">🧹 Kitchen Hygiene &amp; Cleaner (Dishwashing, Sanitization &amp; Floor)</option>
+                    <option value="admin">🛡️ Master Administrator (Full System Architecture &amp; DB)</option>
+                    <option value="customer">👤 Foodie Customer (Regular Customer)</option>
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Roles determine portal permissions. Owners and Managers receive kitchen desk access.
+                  </p>
+                </div>
+
+                {/* Assigned Outlet */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Assigned Outlet / Kitchen
+                  </label>
+                  <select
+                    value={staffForm.assignedOutlet}
+                    onChange={(e) => setStaffForm(prev => ({ ...prev, assignedOutlet: e.target.value }))}
+                    className="w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="All Outlets">All Outlets &amp; HQ</option>
+                    {outlets.map(o => (
+                      <option key={o.id} value={o.name}>{o.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Staff Status */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Employment Status
+                  </label>
+                  <select
+                    value={staffForm.status}
+                    onChange={(e) => setStaffForm(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' | 'on_leave' }))}
+                    className="w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="active">Active (On Duty)</option>
+                    <option value="on_leave">On Leave</option>
+                    <option value="inactive">Inactive / Resigned</option>
+                  </select>
+                </div>
+
+                {/* Password */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>{editingStaff ? 'Change Password (Leave blank to keep unchanged)' : 'Login Password'}</span>
+                  </label>
+                  <input 
+                    type="password"
+                    value={staffForm.password || ''}
+                    onChange={(e) => setStaffForm(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder={editingStaff ? '••••••••' : 'Enter login password (e.g. staff123)'}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required={!editingStaff}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsStaffModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingStaff ? 'Update Staff Member' : 'Create Staff Member'}</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

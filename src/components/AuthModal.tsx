@@ -264,21 +264,6 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  // Instant 1-Click Demo Logins
-  const fillQuickDemo = (role: 'customer' | 'admin') => {
-    setError(null);
-    setSuccessMsg(null);
-    setMode('login');
-    setLoginMethod('password');
-    if (role === 'admin') {
-      setLoginIdentifier('admin@mrbun.in');
-      setLoginPassword('admin123');
-    } else {
-      setLoginIdentifier('9876543210');
-      setLoginPassword('foodie123');
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
       <div 
@@ -832,30 +817,6 @@ export const AuthModal: React.FC = () => {
               )}
             </div>
           )}
-
-          {/* Quick Demo Accounts Helper */}
-          <div className="mt-5 pt-4 border-t border-slate-100 text-center">
-            <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Instant 1-Click Demo Logins</span>
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => fillQuickDemo('customer')}
-                className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl py-2 px-2 text-xs font-semibold transition"
-              >
-                Foodie Customer
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickDemo('admin')}
-                className="flex-1 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl py-2 px-2 text-xs font-semibold transition"
-              >
-                Mr Bun Admin
-              </button>
-            </div>
-          </div>
 
         </div>
       </div>
