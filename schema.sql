@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone TEXT,
     password_hash TEXT NOT NULL,
     address TEXT,
+    avatar_url TEXT,
     role TEXT DEFAULT 'customer', -- 'customer' or 'admin'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

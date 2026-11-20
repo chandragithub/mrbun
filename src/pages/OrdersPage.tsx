@@ -12,7 +12,8 @@ import {
   ShoppingBag, 
   CheckCircle2, 
   Mail, 
-  AlertTriangle 
+  AlertTriangle,
+  UserCog
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/db';
@@ -23,7 +24,7 @@ interface OrdersPageProps {
 }
 
 export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
-  const { user, openAuthModal } = useAuth();
+  const { user, openAuthModal, openProfileModal } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'orders' | 'parties'>('orders');
@@ -109,6 +110,44 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onTrackOrder }) => {
             Order More Food
           </button>
         </div>
+      </div>
+
+      {/* User Profile & Settings Summary Banner */}
+      <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white rounded-3xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden bg-white/20 border-2 border-white/40 shadow-inner flex items-center justify-center font-black text-xl shrink-0">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              user.name ? user.name[0] : 'U'
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight">{user.name}</h2>
+              <span className="text-[10px] bg-white/25 text-white font-bold px-2 py-0.5 rounded-full uppercase">
+                {user.role}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-amber-100 mt-0.5">
+              <span>📞 +91 {user.phone}</span>
+              <span>✉️ {user.email}</span>
+            </div>
+            {user.address && (
+              <p className="text-[11px] text-amber-100/90 truncate max-w-md mt-0.5">
+                📍 {user.address}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={openProfileModal}
+          className="bg-white hover:bg-amber-50 text-amber-950 font-bold px-4 py-2 rounded-xl text-xs shadow transition flex items-center gap-1.5 shrink-0"
+        >
+          <UserCog className="w-4 h-4 text-amber-700" />
+          <span>Edit Profile &amp; Address</span>
+        </button>
       </div>
 
       {/* Tabs */}

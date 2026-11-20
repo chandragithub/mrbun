@@ -12,11 +12,14 @@ interface AuthContextType {
   verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   register: (name: string, phone: string, password: string, email?: string, address?: string, otp?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (updated: Partial<User>) => void;
+  updateProfile: (updated: Partial<User> & { otp?: string }) => Promise<{ success: boolean; user?: User; error?: string }>;
   isAuthModalOpen: boolean;
   openAuthModal: (mode?: 'login' | 'register') => void;
   closeAuthModal: () => void;
   authModalMode: 'login' | 'register';
+  isProfileModalOpen: boolean;
+  openProfileModal: () => void;
+  closeProfileModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     const existing = dbService.getCurrentUser();
@@ -76,11 +80,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const updateProfile = (updated: Partial<User>) => {
-    const updatedUser = dbService.updateCurrentUser(updated);
-    if (updatedUser) {
-      setUser(updatedUser);
+  const updateProfile = async (updated: Partial<User> & { otp?: string }) => {
+    const res = await dbService.updateUserProfile(updated);
+    if (res.success && res.user) {
+      setUser(res.user);
+      return { success: true, user: res.user };
     }
+    return { success: false, error: res.error || 'Failed to update profile' };
   };
 
   const openAuthModal = (mode: 'login' | 'register' = 'login') => {
@@ -90,6 +96,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
+  };
+
+  const openProfileModal = () => {
+    setIsProfileModalOpen(true);
+  };
+
+  const closeProfileModal = () => {
+    setIsProfileModalOpen(false);
   };
 
   return (
@@ -108,7 +122,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,
-        authModalMode
+        authModalMode,
+        isProfileModalOpen,
+        openProfileModal,
+        closeProfileModal
       }}
     >
       {children}

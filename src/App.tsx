@@ -12,6 +12,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { AuthModal } from './components/AuthModal';
+import { UserProfileModal } from './components/UserProfileModal';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { Order, Product } from './types';
 
@@ -161,6 +162,7 @@ export const MainApp: React.FC = () => {
       />
 
       <AuthModal />
+      <UserProfileModal />
     </div>
   );
 };

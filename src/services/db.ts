@@ -732,7 +732,46 @@ export const dbService = {
     if (!current) return null;
     const merged = { ...current, ...updated };
     setStoredData(CURRENT_USER_KEY, merged);
+    // Asynchronously sync with Cloudflare D1
+    apiCall('/api/users/profile', {
+      method: 'POST',
+      body: JSON.stringify(merged)
+    }).catch(() => {});
     return merged;
+  },
+
+  updateUserProfile: async (updated: Partial<User> & { otp?: string }): Promise<{ success: boolean; user?: User; error?: string }> => {
+    const current = dbService.getCurrentUser();
+    const payload = {
+      id: current?.id,
+      email: current?.email,
+      phone: current?.phone,
+      ...updated
+    };
+
+    // Call Cloudflare D1 profile update endpoint
+    const res = await apiCall<{ success: boolean; user?: User; error?: string; message?: string }>('/api/users/profile', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    if (res.success && res.data?.user) {
+      setStoredData(CURRENT_USER_KEY, res.data.user);
+      return { success: true, user: res.data.user };
+    }
+
+    if (res.data?.error) {
+      return { success: false, error: res.data.error };
+    }
+
+    // Local fallback update
+    if (current) {
+      const merged: User = { ...current, ...updated };
+      setStoredData(CURRENT_USER_KEY, merged);
+      return { success: true, user: merged };
+    }
+
+    return { success: false, error: 'User session not found.' };
   },
 
   logout: (): void => {

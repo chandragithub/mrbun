@@ -68,6 +68,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isPlacing, setIsPlacing] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
+  // Sync with user profile whenever user details update
+  React.useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setPhone(user.phone || '');
+      setEmail(user.email || '');
+      setAddress(user.address || '');
+    }
+  }, [user]);
+
   if (!isOpen) return null;
 
   // 1. Authentication Gate: User MUST be logged in to order
