@@ -25,7 +25,7 @@ import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 
 export const Header: React.FC = () => {
-  const { user, isAuthenticated, logout, openAuthModal, openProfileModal } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, openAuthModal, openProfileModal } = useAuth();
   const { totalItemsCount, setIsCartOpen } = useCart();
   const { settings } = useSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -231,14 +231,17 @@ export const Header: React.FC = () => {
                         <span>Party &amp; Bulk Catering</span>
                       </Link>
 
-                      <Link
-                        to="/admin"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2.5 font-bold"
-                      >
-                        <LayoutDashboard className="w-4 h-4 text-amber-700" />
-                        <span>Admin Kitchen Panel</span>
-                      </Link>
+                      {/* Admin Kitchen Panel (Only visible to Admin) */}
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2.5 font-bold"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-amber-700" />
+                          <span>Admin Kitchen Panel</span>
+                        </Link>
+                      )}
 
                       <div className="border-t border-slate-100 mt-1">
                         <button
@@ -541,22 +544,24 @@ export const Header: React.FC = () => {
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition" />
                 </button>
 
-                {/* 8. Admin Kitchen Dashboard */}
-                <button
-                  onClick={() => handleNavClick('/admin')}
-                  className="w-full text-left p-3 rounded-2xl bg-amber-100/80 hover:bg-amber-200/90 transition border border-amber-300 flex items-center justify-between group mt-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
-                      <LayoutDashboard className="w-5 h-5" />
+                {/* 8. Admin Kitchen Dashboard (Admin Only) */}
+                {isAdmin && (
+                  <button
+                    onClick={() => handleNavClick('/admin')}
+                    className="w-full text-left p-3 rounded-2xl bg-amber-100/80 hover:bg-amber-200/90 transition border border-amber-300 flex items-center justify-between group mt-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                        <LayoutDashboard className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Admin Kitchen Dashboard</p>
+                        <p className="text-[11px] text-amber-800 font-semibold">Live orders &amp; kitchen status</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">Admin Kitchen Dashboard</p>
-                      <p className="text-[11px] text-amber-800 font-semibold">Live orders &amp; kitchen status</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-amber-800 group-hover:translate-x-0.5 transition" />
-                </button>
+                    <ChevronRight className="w-4 h-4 text-amber-800 group-hover:translate-x-0.5 transition" />
+                  </button>
+                )}
 
               </div>
 

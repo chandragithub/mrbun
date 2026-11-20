@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   Phone, 
   Mail, 
@@ -17,6 +18,7 @@ import {
 
 export const Footer: React.FC = () => {
   const { settings } = useSettings();
+  const { isAdmin } = useAuth();
   return (
     <footer className="bg-slate-950 text-slate-300 pt-16 pb-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -166,13 +168,15 @@ export const Footer: React.FC = () => {
                 <span>Book Party Catering</span>
               </Link>
 
-              <Link
-                to="/admin"
-                className="w-full bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold py-2 px-3 rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
-                <span>Admin Kitchen Route</span>
-              </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold py-2 px-3 rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Admin Kitchen Route</span>
+                </Link>
+              )}
 
               
             </div>
