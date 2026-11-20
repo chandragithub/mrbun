@@ -145,6 +145,8 @@ export interface StoreSettings {
   aboutHeroTitle: string;
   aboutHeroDescription: string;
   fssaiLicense: string;
+  msg91AuthKey?: string;
+  msg91TemplateId?: string;
   paymentOptions: StorePaymentOptions;
 }
 

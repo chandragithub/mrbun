@@ -6,8 +6,11 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, phone: string, address?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithOtp: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  sendOtp: (phone: string) => Promise<{ success: boolean; message?: string; devOtp?: string; error?: string }>;
+  verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+  register: (name: string, phone: string, password: string, email?: string, address?: string, otp?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (updated: Partial<User>) => void;
   isAuthModalOpen: boolean;
@@ -30,8 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, pass: string) => {
-    const res = await dbService.login(email, pass);
+  const login = async (identifier: string, pass: string) => {
+    const res = await dbService.login(identifier, pass);
     if (res.success && res.user) {
       setUser(res.user);
       setIsAuthModalOpen(false);
@@ -40,8 +43,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: res.error || 'Failed to login' };
   };
 
-  const register = async (name: string, email: string, phone: string, address?: string) => {
-    const res = await dbService.register(name, email, phone, address);
+  const loginWithOtp = async (phone: string, otp: string) => {
+    const res = await dbService.loginWithOtp(phone, otp);
+    if (res.success && res.user) {
+      setUser(res.user);
+      setIsAuthModalOpen(false);
+      return { success: true };
+    }
+    return { success: false, error: res.error || 'Invalid OTP code' };
+  };
+
+  const sendOtp = async (phone: string) => {
+    return await dbService.sendOtp(phone);
+  };
+
+  const verifyOtp = async (phone: string, otp: string) => {
+    return await dbService.verifyOtp(phone, otp);
+  };
+
+  const register = async (name: string, phone: string, password: string, email = '', address = '', otp = '') => {
+    const res = await dbService.register(name, phone, password, email, address, otp);
     if (res.success && res.user) {
       setUser(res.user);
       setIsAuthModalOpen(false);
@@ -78,6 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin' || user?.email === 'admin@mrbun.in',
         login,
+        loginWithOtp,
+        sendOtp,
+        verifyOtp,
         register,
         logout,
         updateProfile,

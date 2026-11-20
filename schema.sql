@@ -178,3 +178,13 @@ CREATE TABLE IF NOT EXISTS reviews (
     menu_item TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 10. MSG91 OTP Verifications Table
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id TEXT PRIMARY KEY,
+    phone TEXT NOT NULL,
+    otp TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    verified INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

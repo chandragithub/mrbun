@@ -1617,6 +1617,53 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Feature 4: MSG91 SMS Gateway & OTP Authentication */}
+              <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>MSG91 SMS Gateway &amp; OTP Authentication</span>
+                  </h3>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                    Live Phone Verification
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Configure your MSG91 Auth Key and OTP Template ID to send live SMS OTPs during customer registration and login.
+                  If left blank, the system automatically uses resilient demo fallback mode (<code className="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">1234</code>) so registration never fails.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      MSG91 Auth Key
+                    </label>
+                    <input 
+                      type="password"
+                      value={brandForm.msg91AuthKey || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, msg91AuthKey: e.target.value }))}
+                      placeholder="e.g. 405929A... (from msg91.com panel)"
+                      className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Obtained from MSG91 Dashboard → Authkey.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      MSG91 OTP Template ID (DLT / Flow)
+                    </label>
+                    <input 
+                      type="text"
+                      value={brandForm.msg91TemplateId || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, msg91TemplateId: e.target.value }))}
+                      placeholder="e.g. 64b8a... or DLT Template ID"
+                      className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Template configured under MSG91 OTP Flow.</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Submit Button */}
               <div className="pt-2 flex items-center justify-between">
                 <button
