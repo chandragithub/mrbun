@@ -34,6 +34,10 @@ const DEFAULT_SETTINGS = {
   logoUrl: '/logo.png',
   phone: '9476088111',
   email: 'contact@mrbun.in',
+  address: 'Mr Bun Central Kitchen & Food Hub, Commercial Avenue, Sector 4',
+  aboutStory: 'With his dapper bowler hat, signature mustache, dashing red bow-tie, and enthusiastic thumbs-up, Mr Bun is the embodiment of fast food perfection. Coming straight out of a warm pizza box holding a fresh slice of cheese burst pizza, he reminds us that great food should always be fun, generous, and served with a wink! Whether it\'s a quick midnight craving or a 100-guest birthday bash, Mr Bun brings the party to your table with steaming hot patties, freshly toasted sesame buns, and handcrafted dips.',
+  aboutHeroTitle: 'Crafting Happiness in Every Bite & Sip',
+  aboutHeroDescription: 'Born from a deep obsession with buttery brioche buns, molten cheese burst crusts, and ice-cold artisan mocktails, Mr Bun is on a mission to elevate fast food into a culinary celebration.',
   fssaiLicense: '22926112000173',
   paymentOptions: {
     cashEnabled: true,
@@ -220,6 +224,10 @@ async function ensureTables(db: any) {
         logo_url TEXT NOT NULL,
         phone TEXT NOT NULL,
         email TEXT NOT NULL,
+        address TEXT,
+        about_story TEXT,
+        about_hero_title TEXT,
+        about_hero_description TEXT,
         fssai_license TEXT NOT NULL,
         payment_options_json TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -358,6 +366,12 @@ async function ensureTables(db: any) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Safe column migrations for existing store_settings table
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN address TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN about_story TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN about_hero_title TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN about_hero_description TEXT;'); } catch {}
   } catch (e) {
     console.error('Error ensuring tables:', e);
   }
@@ -386,7 +400,7 @@ export default {
       });
     }
 
-    // 1. FEATURE 1 & 2: STORE SETTINGS (Logo, Name, Tagline, Phone, Email, FSSAI, Payments)
+    // 1. FEATURE 1 & 2: STORE SETTINGS (Logo, Name, Tagline, Phone, Email, Address, About Us, FSSAI, Payments)
     if (url.pathname === '/api/settings') {
       await ensureTables(env.DB);
 
@@ -398,12 +412,16 @@ export default {
               return jsonResponse({
                 success: true,
                 settings: {
-                  brandName: row.brand_name,
-                  tagline: row.tagline,
-                  logoUrl: row.logo_url,
-                  phone: row.phone,
-                  email: row.email,
-                  fssaiLicense: row.fssai_license,
+                  brandName: row.brand_name || DEFAULT_SETTINGS.brandName,
+                  tagline: row.tagline || DEFAULT_SETTINGS.tagline,
+                  logoUrl: row.logo_url || DEFAULT_SETTINGS.logoUrl,
+                  phone: row.phone || DEFAULT_SETTINGS.phone,
+                  email: row.email || DEFAULT_SETTINGS.email,
+                  address: row.address || DEFAULT_SETTINGS.address,
+                  aboutStory: row.about_story || DEFAULT_SETTINGS.aboutStory,
+                  aboutHeroTitle: row.about_hero_title || DEFAULT_SETTINGS.aboutHeroTitle,
+                  aboutHeroDescription: row.about_hero_description || DEFAULT_SETTINGS.aboutHeroDescription,
+                  fssaiLicense: row.fssai_license || DEFAULT_SETTINGS.fssaiLicense,
                   paymentOptions: JSON.parse(row.payment_options_json || '{}')
                 }
               });
@@ -425,6 +443,10 @@ export default {
           const logoUrl = body.logoUrl ?? current.logo_url ?? DEFAULT_SETTINGS.logoUrl;
           const phone = body.phone ?? current.phone ?? DEFAULT_SETTINGS.phone;
           const email = body.email ?? current.email ?? DEFAULT_SETTINGS.email;
+          const address = body.address ?? current.address ?? DEFAULT_SETTINGS.address;
+          const aboutStory = body.aboutStory ?? current.about_story ?? DEFAULT_SETTINGS.aboutStory;
+          const aboutHeroTitle = body.aboutHeroTitle ?? current.about_hero_title ?? DEFAULT_SETTINGS.aboutHeroTitle;
+          const aboutHeroDescription = body.aboutHeroDescription ?? current.about_hero_description ?? DEFAULT_SETTINGS.aboutHeroDescription;
           const fssaiLicense = body.fssaiLicense ?? current.fssai_license ?? DEFAULT_SETTINGS.fssaiLicense;
           
           let paymentOptions = DEFAULT_SETTINGS.paymentOptions;
@@ -437,14 +459,22 @@ export default {
 
           if (env.DB) {
             await env.DB.prepare(`
-              INSERT INTO store_settings (id, brand_name, tagline, logo_url, phone, email, fssai_license, payment_options_json, updated_at)
-              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+              INSERT INTO store_settings (
+                id, brand_name, tagline, logo_url, phone, email, address,
+                about_story, about_hero_title, about_hero_description,
+                fssai_license, payment_options_json, updated_at
+              )
+              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
               ON CONFLICT(id) DO UPDATE SET
                 brand_name = excluded.brand_name,
                 tagline = excluded.tagline,
                 logo_url = excluded.logo_url,
                 phone = excluded.phone,
                 email = excluded.email,
+                address = excluded.address,
+                about_story = excluded.about_story,
+                about_hero_title = excluded.about_hero_title,
+                about_hero_description = excluded.about_hero_description,
                 fssai_license = excluded.fssai_license,
                 payment_options_json = excluded.payment_options_json,
                 updated_at = CURRENT_TIMESTAMP
@@ -454,6 +484,10 @@ export default {
               logoUrl,
               phone,
               email,
+              address,
+              aboutStory,
+              aboutHeroTitle,
+              aboutHeroDescription,
               fssaiLicense,
               JSON.stringify(paymentOptions)
             ).run();
@@ -467,6 +501,10 @@ export default {
               logoUrl,
               phone,
               email,
+              address,
+              aboutStory,
+              aboutHeroTitle,
+              aboutHeroDescription,
               fssaiLicense,
               paymentOptions
             },

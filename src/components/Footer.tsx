@@ -86,7 +86,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span>{settings.brandName} Central Kitchen &amp; Food Hub, Main Avenue</span>
+                <span>{settings.address || `${settings.brandName} Central Kitchen & Food Hub, Main Avenue`}</span>
               </li>
               <li className="flex items-center gap-2 text-slate-400 pt-1">
                 <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -174,12 +174,7 @@ export const Footer: React.FC = () => {
                 <span>Admin Kitchen Route</span>
               </Link>
 
-              <div className="pt-2 text-[11px] text-slate-500 space-y-1">
-                <p>⚡ Powered by:</p>
-                <p className="text-slate-400 font-mono text-[10px]">
-                  Cloudflare Workers • Wrangler • Vite • React • Tailwind • SQLite (D1)
-                </p>
-              </div>
+              
             </div>
           </div>
 

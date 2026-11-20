@@ -144,9 +144,9 @@ export const Header: React.FC = () => {
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span>Bulk &amp; Parties</span>
               </NavLink>
-              <NavLink to="/outlets" className={navLinkClass}>
+              {/* <NavLink to="/outlets" className={navLinkClass}>
                 Outlets
-              </NavLink>
+              </NavLink> */}
               <NavLink to="/franchise" className={navLinkClass}>
                 Franchise
               </NavLink>

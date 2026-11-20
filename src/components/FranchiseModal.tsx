@@ -10,6 +10,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { dbService } from '../services/db';
 
 interface FranchiseModalProps {
@@ -24,6 +25,7 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
   initialModel = 'Express Delivery & Takeaway Hub'
 }) => {
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   const [fullName, setFullName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -338,7 +340,7 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
               <div>
                 <p className="text-xs font-bold text-slate-900">Direct Franchise Support Desk</p>
                 <p className="text-[11px] text-slate-600 mt-0.5">
-                  Call our Franchise Manager directly at <strong className="text-slate-900 font-bold">9476088111</strong> or email <strong className="text-slate-900 font-bold">contact@mrbun.in</strong>
+                  Call our Franchise Manager directly at <strong className="text-slate-900 font-bold">{settings.phone}</strong> or email <strong className="text-slate-900 font-bold">{settings.email}</strong>
                 </p>
               </div>
 
@@ -360,7 +362,7 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
 
             {/* Statutory Footer */}
             <p className="text-[10px] text-center text-slate-400">
-              Company Name: Mr Bun • Helpline: 9476088111 • Email: contact@mrbun.in • FSSAI License: 22926112000173 • All applications are treated with strict confidentiality.
+              Company Name: {settings.brandName} • Helpline: {settings.phone} • Email: {settings.email} • FSSAI License: {settings.fssaiLicense} • All applications are treated with strict confidentiality.
             </p>
 
           </form>

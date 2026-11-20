@@ -3,7 +3,7 @@
 -- Subdomain: mrbun.ceansystech.workers.dev
 -- Helpline: 9476088111 | Email: contact@mrbun.in | FSSAI: 22926112000173
 
--- 1. Store Settings (Brand Identity, Logo, Legal Details, Payment Gateways & Cash Policies)
+-- 1. Store Settings (Brand Identity, Logo, Phone, Email, Address, About Us, FSSAI, Payments)
 CREATE TABLE IF NOT EXISTS store_settings (
     id TEXT PRIMARY KEY,
     brand_name TEXT NOT NULL,
@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS store_settings (
     logo_url TEXT NOT NULL,
     phone TEXT NOT NULL,
     email TEXT NOT NULL,
+    address TEXT,
+    about_story TEXT,
+    about_hero_title TEXT,
+    about_hero_description TEXT,
     fssai_license TEXT NOT NULL,
     payment_options_json TEXT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

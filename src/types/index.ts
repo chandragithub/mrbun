@@ -140,6 +140,10 @@ export interface StoreSettings {
   logoUrl: string;
   phone: string;
   email: string;
+  address: string;
+  aboutStory: string;
+  aboutHeroTitle: string;
+  aboutHeroDescription: string;
   fssaiLicense: string;
   paymentOptions: StorePaymentOptions;
 }

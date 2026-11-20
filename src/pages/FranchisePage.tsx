@@ -16,8 +16,10 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { FranchiseModal } from '../components/FranchiseModal';
+import { useSettings } from '../context/SettingsContext';
 
 export const FranchisePage: React.FC = () => {
+  const { settings } = useSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState('Express Delivery & Takeaway Hub');
 
@@ -269,11 +271,11 @@ export const FranchisePage: React.FC = () => {
             Open Application Dialog
           </button>
           <a
-            href="tel:9476088111"
+            href={`tel:${settings.phone}`}
             className="bg-black/30 hover:bg-black/40 text-white font-bold px-5 py-3.5 rounded-2xl text-xs sm:text-sm border border-white/20 transition flex items-center gap-2"
           >
             <PhoneCall className="w-4 h-4 text-amber-300" />
-            <span>Hotline: 9476088111</span>
+            <span>Hotline: {settings.phone}</span>
           </a>
         </div>
       </div>

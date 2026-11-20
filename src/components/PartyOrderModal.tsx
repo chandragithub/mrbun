@@ -38,7 +38,7 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
   initialGuests = 25
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
-  const { packages: dynamicPackages } = useSettings();
+  const { packages: dynamicPackages, settings } = useSettings();
   const availablePackages = dynamicPackages && dynamicPackages.length > 0 ? dynamicPackages : PARTY_PACKAGES;
 
   const [eventType, setEventType] = useState('Birthday Party');
@@ -137,7 +137,7 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
           </div>
 
           <p className="text-[10px] text-slate-400">
-            FSSAI Lic: 22926112000173 • Phone Support: 9476088111
+            FSSAI Lic: {settings.fssaiLicense} • Phone Support: {settings.phone}
           </p>
         </div>
       </div>
@@ -241,11 +241,11 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                 <div className="flex items-center gap-1.5 bg-white p-2 rounded-xl border border-amber-100">
                   <PhoneCall className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Owner Phone / SMS: <strong className="font-mono text-slate-800">9476088111</strong></span>
+                  <span>Owner Phone / SMS: <strong className="font-mono text-slate-800">{settings.phone}</strong></span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-white p-2 rounded-xl border border-amber-100">
                   <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>Owner Email: <strong className="font-mono text-slate-800">contact@mrbun.in</strong></span>
+                  <span>Owner Email: <strong className="font-mono text-slate-800">{settings.email}</strong></span>
                 </div>
               </div>
 
@@ -277,11 +277,11 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <a
-                href="tel:9476088111"
+                href={`tel:${settings.phone}`}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl text-xs sm:text-sm shadow-md transition"
               >
                 <PhoneCall className="w-4 h-4" />
-                <span>Call Owner Directly (9476088111)</span>
+                <span>Call Owner Directly ({settings.phone})</span>
               </a>
 
               <button
@@ -565,7 +565,7 @@ export const PartyOrderModal: React.FC<PartyOrderModalProps> = ({
 
             {/* Footer notice */}
             <p className="text-[11px] text-center text-slate-400">
-              Mr Bun Catering • Helpline: 9476088111 • FSSAI Lic: 22926112000173 • Zero advance cancellation policy
+              {settings.brandName} Catering • Helpline: {settings.phone} • FSSAI Lic: {settings.fssaiLicense} • Zero advance cancellation policy
             </p>
 
           </form>

@@ -12,8 +12,10 @@ import {
   HelpCircle,
   Sparkles
 } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 export const ContactPage: React.FC = () => {
+  const { settings } = useSettings();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -63,10 +65,10 @@ export const ContactPage: React.FC = () => {
           We Are Here For You
         </span>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-          Contact <span className="text-amber-600">Mr Bun</span>
+          Contact <span className="text-amber-600">{settings.brandName}</span>
         </h1>
         <p className="text-slate-600 text-xs sm:text-sm">
-          Have a question about our menu, need custom party catering, or want to share feedback? Our team is always ready to assist!
+          Have a question about our menu, need custom party catering, or want to visit our kitchen? Our team is always ready to assist!
         </p>
       </div>
 
@@ -81,10 +83,10 @@ export const ContactPage: React.FC = () => {
           <h3 className="text-base font-bold text-slate-900">Direct Helpline</h3>
           <p className="text-xs text-slate-500">For phone orders, catering inquiries &amp; live support.</p>
           <a
-            href="tel:9476088111"
+            href={`tel:${settings.phone}`}
             className="inline-block text-base font-black text-amber-600 hover:text-amber-700 font-display"
           >
-            9476088111
+            {settings.phone}
           </a>
         </div>
 
@@ -96,22 +98,22 @@ export const ContactPage: React.FC = () => {
           <h3 className="text-base font-bold text-slate-900">Official Email</h3>
           <p className="text-xs text-slate-500">For invoices, business queries, and feedback.</p>
           <a
-            href="mailto:contact@mrbun.in"
-            className="inline-block text-sm font-bold text-amber-600 hover:underline"
+            href={`mailto:${settings.email}`}
+            className="inline-block text-sm font-bold text-amber-600 hover:underline break-all"
           >
-            contact@mrbun.in
+            {settings.email}
           </a>
         </div>
 
-        {/* Operating Hours */}
+        {/* Operating Hours / Central Address */}
         <div className="bg-white p-6 rounded-3xl border border-amber-100 shadow-sm hover:shadow-lg transition space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
-            <Clock className="w-6 h-6" />
+            <MapPin className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-slate-900">Serving Hours</h3>
-          <p className="text-xs text-slate-500">Open 7 Days a week including holidays.</p>
-          <p className="text-sm font-bold text-slate-800">
-            11:00 AM – 01:00 AM
+          <h3 className="text-base font-bold text-slate-900">Central Kitchen</h3>
+          <p className="text-xs text-slate-500 line-clamp-2">{settings.address || 'Central Food Hub, Main Avenue'}</p>
+          <p className="text-xs font-bold text-slate-800">
+            Open 11:00 AM – 01:00 AM
           </p>
         </div>
 
@@ -123,7 +125,7 @@ export const ContactPage: React.FC = () => {
           <h3 className="text-base font-bold text-slate-900">FSSAI Certified</h3>
           <p className="text-xs text-slate-500">Government certified food safety compliance.</p>
           <p className="text-xs font-mono font-bold text-slate-900 tracking-wider">
-            22926112000173
+            {settings.fssaiLicense}
           </p>
         </div>
 
@@ -256,13 +258,14 @@ export const ContactPage: React.FC = () => {
           <div className="bg-gradient-to-br from-amber-500 to-red-600 rounded-3xl p-8 text-white shadow-xl space-y-5">
             <div className="flex items-center gap-3">
               <img
-                src="/logo.png"
-                alt="Mr Bun Logo"
+                src={settings.logoUrl || '/logo.png'}
+                alt={`${settings.brandName} Logo`}
                 className="w-14 h-14 object-contain rounded-2xl bg-white p-1 shadow-md"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
               />
               <div>
-                <h3 className="text-2xl font-black font-display">Mr Bun Fast Food</h3>
-                <p className="text-xs text-amber-100">Registered Food Enterprise</p>
+                <h3 className="text-2xl font-black font-display">{settings.brandName}</h3>
+                <p className="text-xs text-amber-100">{settings.tagline}</p>
               </div>
             </div>
 
@@ -272,25 +275,26 @@ export const ContactPage: React.FC = () => {
 
             <div className="space-y-3 pt-2">
               <a
-                href="tel:9476088111"
+                href={`tel:${settings.phone}`}
                 className="w-full bg-white text-slate-900 hover:bg-amber-50 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow transition"
               >
                 <PhoneCall className="w-4 h-4 text-emerald-600" />
-                <span>Call Directly: 9476088111</span>
+                <span>Call Directly: {settings.phone}</span>
               </a>
 
               <a
-                href="mailto:contact@mrbun.in"
+                href={`mailto:${settings.email}`}
                 className="w-full bg-black/20 text-white hover:bg-black/30 font-bold py-3 px-4 rounded-xl text-xs border border-white/20 flex items-center justify-center gap-2 transition"
               >
                 <Mail className="w-4 h-4" />
-                <span>Email: contact@mrbun.in</span>
+                <span>Email: {settings.email}</span>
               </a>
             </div>
 
             <div className="pt-3 border-t border-white/20 text-[11px] text-amber-100 space-y-1">
-              <p>🏢 <strong>Company:</strong> Mr Bun</p>
-              <p>🛡️ <strong>FSSAI License:</strong> 22926112000173</p>
+              <p>🏢 <strong>Company:</strong> {settings.brandName}</p>
+              <p>📍 <strong>Central Location:</strong> {settings.address || 'Central Food Hub, Main Avenue'}</p>
+              <p>🛡️ <strong>FSSAI License:</strong> {settings.fssaiLicense}</p>
             </div>
           </div>
 

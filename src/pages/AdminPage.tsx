@@ -38,7 +38,8 @@ import {
   Sparkles,
   ShieldCheck,
   Eye,
-  X
+  X,
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -250,7 +251,7 @@ export const AdminPage: React.FC = () => {
   const handleSaveBrandSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateSettings(brandForm);
-    showNotification('✨ Brand Identity & Logo updated successfully! Changes are live across the entire website.');
+    showNotification('✨ Store settings (Phone, Email, Address, About Us & FSSAI) updated successfully! Changes are live across the entire website.');
   };
 
   const handleResetLogo = () => {
@@ -879,7 +880,7 @@ export const AdminPage: React.FC = () => {
             <span>Celebration Packages ({packages.length})</span>
           </button>
 
-          {/* 1 & 2. Logo & Brand Identity */}
+          {/* 1. Store Settings & About Us */}
           <button
             onClick={() => setActiveTab('brand')}
             className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
@@ -889,7 +890,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <ImageIcon className="w-4 h-4" />
-            <span>1 &amp; 2. Logo &amp; Brand</span>
+            <span>1. Store Settings &amp; About Us</span>
           </button>
 
           {/* 3. Upload Menu Dynamically */}
@@ -1358,16 +1359,28 @@ export const AdminPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: 1. LOGO IMAGE UPLOAD & 2. NAME / BRAND IDENTITY */}
+        {/* TAB 3: 1. LOGO, CONTACT, ADDRESS, ABOUT US & FSSAI */}
         {activeTab === 'brand' && (
           <div className="p-6 space-y-8">
-            <div>
-              <h2 className="text-xl font-black text-slate-900 font-display">
-                Brand Customization &amp; Identity
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Configure your official restaurant logo, brand name, statutory contact numbers, and FSSAI license.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 font-display">
+                  Store Settings &amp; About Us Configuration
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Dynamically update your phone number, email ID, registered address, FSSAI license, logo, and the entire About Us page content.
+                </p>
+              </div>
+
+              <a
+                href="/about"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl transition"
+              >
+                <Eye className="w-4 h-4 text-amber-700" />
+                <span>Preview Live About Us Page ↗</span>
+              </a>
             </div>
 
             <form onSubmit={handleSaveBrandSettings} className="space-y-6 max-w-4xl">
@@ -1376,7 +1389,7 @@ export const AdminPage: React.FC = () => {
               <div className="bg-amber-50/60 p-6 rounded-3xl border border-amber-200 space-y-4">
                 <h3 className="text-sm font-extrabold text-amber-950 uppercase tracking-wider flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-amber-600" />
-                  <span>1. Official Logo Image Customizer</span>
+                  <span>Official Logo Image</span>
                 </h3>
 
                 <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -1435,17 +1448,17 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Feature 2: Name & Statutory Information */}
+              {/* Feature 2: Name, Phone, Email, Address & Statutory FSSAI */}
               <div className="bg-white p-6 rounded-3xl border border-slate-200 space-y-4">
                 <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>2. Brand Name &amp; Legal Statutory Information</span>
+                  <span>Store Contact, Address &amp; Legal Compliance</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Brand / Store Name
+                      Brand / Store Name <span className="text-red-500">*</span>
                     </label>
                     <input 
                       type="text"
@@ -1459,7 +1472,7 @@ export const AdminPage: React.FC = () => {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Tagline / Motto
+                      Tagline / Motto <span className="text-red-500">*</span>
                     </label>
                     <input 
                       type="text"
@@ -1471,9 +1484,11 @@ export const AdminPage: React.FC = () => {
                     />
                   </div>
 
+                  {/* Phone Number */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Owner Helpline Phone Number
+                    <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Owner Helpline Phone Number <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-emerald-600 font-semibold">SMS / Call alerts</span>
                     </label>
                     <input 
                       type="tel"
@@ -1483,12 +1498,14 @@ export const AdminPage: React.FC = () => {
                       className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
                       required
                     />
-                    <p className="text-[10px] text-slate-400 mt-0.5">Used for order alerts &amp; customer customer support.</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Used for order approval notifications, header helpline &amp; customer support.</p>
                   </div>
 
+                  {/* Email ID */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Official Contact Email
+                    <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Official Contact Email ID <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-blue-600 font-semibold">Invoices &amp; Inquiries</span>
                     </label>
                     <input 
                       type="email"
@@ -1498,11 +1515,30 @@ export const AdminPage: React.FC = () => {
                       className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
                       required
                     />
+                    <p className="text-[10px] text-slate-400 mt-0.5">Dispatches customer confirmation emails and official billing.</p>
                   </div>
 
+                  {/* Address */}
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      FSSAI Food Safety License Number
+                    <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Store / Central Kitchen Address <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-amber-700 font-semibold">Featured in Footer &amp; Contact Page</span>
+                    </label>
+                    <textarea 
+                      value={brandForm.address || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, address: e.target.value }))}
+                      rows={2}
+                      placeholder="e.g. Mr Bun Central Kitchen & Food Hub, Commercial Avenue, Sector 4, Main Highway, Bangalore"
+                      className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                      required
+                    />
+                  </div>
+
+                  {/* FSSAI License Number */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>FSSAI Food Safety License Number <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Govt Food Safety Certified</span>
                     </label>
                     <input 
                       type="text"
@@ -1512,19 +1548,89 @@ export const AdminPage: React.FC = () => {
                       className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
                       required
                     />
-                    <p className="text-[10px] text-slate-400 mt-0.5">Displayed prominently in footer, header, and order invoices for regulatory compliance.</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Displayed in footer, header badge, and party order invoices for regulatory compliance.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 3: About Us Page Content Customizer */}
+              <div className="bg-amber-50/40 p-6 rounded-3xl border border-amber-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    <span>About Us Page Dynamic Customizer</span>
+                  </h3>
+                  <a
+                    href="/about"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold text-amber-800 hover:underline flex items-center gap-1"
+                  >
+                    <span>View /about Page</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Update the headline, mission description, and brand story that your customers read on the <strong>About Us</strong> page.
+                </p>
+
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      About Us Hero Headline
+                    </label>
+                    <input 
+                      type="text"
+                      value={brandForm.aboutHeroTitle || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, aboutHeroTitle: e.target.value }))}
+                      placeholder="e.g. Crafting Happiness in Every Bite & Sip"
+                      className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      About Us Hero Subtitle / Mission Statement
+                    </label>
+                    <textarea 
+                      value={brandForm.aboutHeroDescription || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, aboutHeroDescription: e.target.value }))}
+                      rows={2}
+                      placeholder="e.g. Born from a deep obsession with buttery brioche buns, molten cheese burst crusts, and ice-cold artisan mocktails..."
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Full Brand Story &amp; Mascot Lore (The Story of Mr Bun)
+                    </label>
+                    <textarea 
+                      value={brandForm.aboutStory || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, aboutStory: e.target.value }))}
+                      rows={4}
+                      placeholder="e.g. With his dapper bowler hat, signature mustache, dashing red bow-tie, and enthusiastic thumbs-up, Mr Bun is the embodiment of fast food perfection..."
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">This detailed narrative is displayed directly under &quot;Who is Mr Bun?&quot; on the About Us page.</p>
                   </div>
                 </div>
               </div>
 
               {/* Submit Button */}
-              <button
-                type="submit"
-                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-6 py-3 rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Logo &amp; Brand Settings</span>
-              </button>
+              <div className="pt-2 flex items-center justify-between">
+                <button
+                  type="submit"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-7 py-3.5 rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save All Store &amp; About Us Settings</span>
+                </button>
+
+                <p className="text-[11px] text-slate-400 hidden sm:block">
+                  Updates sync instantly to Cloudflare D1 and across the website.
+                </p>
+              </div>
             </form>
           </div>
         )}
