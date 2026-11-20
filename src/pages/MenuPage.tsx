@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Flame, Sparkles, Filter, SlidersHorizontal } from 'lucide-react';
+import { Search, Flame, Sparkles, Filter, SlidersHorizontal, MoreVertical, Check } from 'lucide-react';
 import { CategoryType, Product } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { FoodCard } from '../components/FoodCard';
@@ -31,6 +31,31 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onCustomizeProduct }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [vegOnly, setVegOnly] = useState(false);
   const [nonVegOnly, setNonVegOnly] = useState(false);
+  const [isKebabOpen, setIsKebabOpen] = useState(false);
+
+  const kebabRef = useRef<HTMLDivElement>(null);
+  const categoryRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Close kebab dropdown on click outside or escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (kebabRef.current && !kebabRef.current.contains(event.target as Node)) {
+        setIsKebabOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsKebabOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Sync state if URL search param changes
   useEffect(() => {
@@ -89,25 +114,90 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onCustomizeProduct }) => {
         </p>
       </div>
 
-      {/* Category Filter Pills (Navigation on Click) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 no-scrollbar">
-        {CATEGORIES.map((cat) => {
-          const isActive = selectedCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => handleCategorySelect(cat.id)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm ${
-                isActive
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 scale-105 ring-2 ring-amber-400/40'
-                  : 'bg-white text-slate-700 border border-amber-100 hover:bg-amber-50 hover:text-amber-800'
-              }`}
-            >
-              <span className="text-base">{cat.icon}</span>
-              <span>{cat.name}</span>
-            </button>
-          );
-        })}
+      {/* Category Filter Pills & Kebab Menu */}
+      <div className="relative flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar scroll-smooth flex-1">
+          {CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                ref={(el) => {
+                  categoryRefs.current[cat.id] = el;
+                }}
+                onClick={() => handleCategorySelect(cat.id)}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm shrink-0 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 scale-105 ring-2 ring-amber-400/40'
+                    : 'bg-white text-slate-700 border border-amber-100 hover:bg-amber-50 hover:text-amber-800'
+                }`}
+              >
+                <span className="text-base">{cat.icon}</span>
+                <span>{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Kebab Menu at the end */}
+        <div className="relative shrink-0" ref={kebabRef}>
+          <button
+            type="button"
+            onClick={() => setIsKebabOpen((prev) => !prev)}
+            aria-expanded={isKebabOpen}
+            aria-haspopup="true"
+            title="More Categories"
+            className={`flex items-center justify-center p-3 rounded-2xl border transition-all duration-200 shadow-sm ${
+              isKebabOpen
+                ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                : 'bg-white text-slate-700 border-amber-100 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300'
+            }`}
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+
+          {/* Kebab Dropdown List */}
+          {isKebabOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-amber-100 p-2 z-50 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-amber-50 flex items-center justify-between">
+                <span>All Categories</span>
+                <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                  {CATEGORIES.length}
+                </span>
+              </div>
+              <div className="mt-1 space-y-1 max-h-72 overflow-y-auto no-scrollbar">
+                {CATEGORIES.map((cat) => {
+                  const isActive = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        handleCategorySelect(cat.id);
+                        setIsKebabOpen(false);
+                        categoryRefs.current[cat.id]?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'nearest',
+                          inline: 'center',
+                        });
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                        isActive
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-sm'
+                          : 'text-slate-700 hover:bg-amber-50 hover:text-amber-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-base">{cat.icon}</span>
+                        <span>{cat.name}</span>
+                      </div>
+                      {isActive && <Check className="w-4 h-4 shrink-0 text-white" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search & Filter Toolbar */}
