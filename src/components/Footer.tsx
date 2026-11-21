@@ -204,9 +204,23 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom copyright row */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© 2026 {settings.brandName}. All rights reserved. Registered Trademark.</p>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="pt-8 border-t border-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="space-y-1 text-center sm:text-left">
+            <p>© 2026 {settings.brandName}. All rights reserved. Registered Trademark.</p>
+            <p className="text-[11px] text-slate-400">
+              This website &amp; digital ordering platform is developed and maintained by{' '}
+              <a 
+                href="https://ceansys.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-amber-400 hover:text-amber-300 font-bold underline decoration-amber-500/50 hover:decoration-amber-300 transition"
+              >
+                Ceansys Technologies
+              </a>
+              .
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
             <Link to="/terms" className="text-slate-400 hover:text-amber-400 transition hover:underline">
               Terms &amp; Conditions
             </Link>

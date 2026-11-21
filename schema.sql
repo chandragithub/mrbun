@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS store_settings (
     about_hero_title TEXT,
     about_hero_description TEXT,
     fssai_license TEXT NOT NULL,
+    msg91_auth_key TEXT,
+    msg91_template_id TEXT,
+    msg91_widget_id TEXT,
+    msg91_token_auth TEXT,
     payment_options_json TEXT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

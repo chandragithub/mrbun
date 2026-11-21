@@ -25,16 +25,17 @@ export const TermsPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState('acceptance');
 
   const sections = [
-    { id: 'acceptance', title: '1. Acceptance of Terms', icon: FileText },
-    { id: 'eligibility', title: '2. User Eligibility & Account Security', icon: Users },
-    { id: 'orders', title: '3. Ordering, Menu & Kitchen Acceptance', icon: Clock },
-    { id: 'pricing', title: '4. Pricing, Taxes, Delivery & Minimum Order', icon: CreditCard },
-    { id: 'delivery', title: '5. Dispatch, Delivery & Geo-Coverage', icon: Truck },
-    { id: 'parties', title: '6. Bulk Orders & Party Catering Commitments', icon: Sparkles },
-    { id: 'food-quality', title: '7. Food Quality, Allergens & Statutory FSSAI', icon: ShieldCheck },
-    { id: 'ip', title: '8. Intellectual Property & Brand Rights', icon: Lock },
-    { id: 'liability', title: '9. Limitation of Liability & Force Majeure', icon: AlertTriangle },
-    { id: 'governing-law', title: '10. Dispute Resolution & Governing Jurisdiction', icon: Scale },
+    { id: 'acceptance', title: '1. Acceptance & Operating Entity', icon: FileText },
+    { id: 'operator', title: '2. Platform Development & Maintenance (Ceansys Technologies)', icon: Building2 },
+    { id: 'eligibility', title: '3. User Eligibility & Account Security', icon: Users },
+    { id: 'orders', title: '4. Ordering, Menu & Kitchen Acceptance', icon: Clock },
+    { id: 'pricing', title: '5. Pricing, Taxes, Delivery & Minimum Order', icon: CreditCard },
+    { id: 'delivery', title: '6. Dispatch, Delivery & Geo-Coverage', icon: Truck },
+    { id: 'parties', title: '7. Bulk Orders & Party Catering Commitments', icon: Sparkles },
+    { id: 'food-quality', title: '8. Food Quality, Allergens & Statutory FSSAI', icon: ShieldCheck },
+    { id: 'ip', title: '9. Intellectual Property & Brand Rights', icon: Lock },
+    { id: 'liability', title: '10. Limitation of Liability & Force Majeure', icon: AlertTriangle },
+    { id: 'governing-law', title: '11. Dispute Resolution & Governing Jurisdiction', icon: Scale },
   ];
 
   const scrollTo = (id: string) => {
@@ -140,24 +141,58 @@ export const TermsPage: React.FC = () => {
               <span>Section 1</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              1. Acceptance of Terms
+              1. Acceptance &amp; Operating Agreement
             </h2>
             <p>
-              By accessing, browsing, registering on, or placing orders through the <strong>{settings.brandName}</strong> website, mobile progressive web application, physical QR-code table ordering desks, or third-party partner integrations, you acknowledge that you have read, understood, and agree to be bound by these Terms &amp; Conditions and our linked Policies (including our <Link to="/refunds" className="text-amber-700 font-bold hover:underline">Refunds &amp; Cancellations Policy</Link>).
+              By accessing, browsing, registering on, or placing orders through the <strong>{settings.brandName}</strong> website, mobile progressive web application, physical QR-code table ordering desks, or digital interfaces, you acknowledge that you have read, understood, and unconditionally agree to be bound by these Terms &amp; Conditions and all referenced policies (including our <Link to="/refunds" className="text-amber-700 font-bold hover:underline">Refunds &amp; Cancellations Policy</Link>).
             </p>
             <p>
-              If you do not agree with any part of these Terms, you must discontinue using our platform and refrain from placing orders or reserving services with {settings.brandName}.
+              If you do not agree with any part of these Terms, you must immediately discontinue using our digital platform and refrain from placing orders or reserving catering services.
             </p>
           </section>
 
-          {/* Section 2 */}
-          <section id="eligibility" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
-            <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
-              <Users className="w-4 h-4 text-amber-600" />
+          {/* Section 2: Dedicated Ceansys Technologies Management Clause */}
+          <section id="operator" className="bg-amber-50/60 rounded-3xl p-6 sm:p-8 border-2 border-amber-300 shadow-sm space-y-3.5 scroll-mt-24">
+            <div className="flex items-center gap-2.5 text-amber-800 font-extrabold text-xs uppercase tracking-wider">
+              <Building2 className="w-4 h-4 text-amber-700" />
               <span>Section 2</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              2. User Eligibility &amp; Account Security
+              2. Platform Development &amp; Management by Ceansys Technologies
+            </h2>
+            <p className="font-semibold text-slate-800">
+              This website and digital ordering application is exclusively developed, hosted, secured, and maintained by{' '}
+              <a 
+                href="https://ceansys.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-amber-700 hover:text-amber-800 font-extrabold underline decoration-amber-500 hover:decoration-amber-700 transition"
+              >
+                Ceansys Technologies
+              </a>{' '}
+              (<a href="https://ceansys.com" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-amber-800 underline">ceansys.com</a>).
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>
+                <strong>Application Management:</strong> For all legal, commercial, and technical purposes governing this digital application, <strong>Ceansys Technologies</strong> is the technology company responsible for managing the platform infrastructure, software architecture, digital security, database systems, and online transaction interfaces.
+              </li>
+              <li>
+                <strong>Food &amp; Kitchen Operations:</strong> Culinary food preparation, kitchen cooking, recipe formulation, ingredient procurement, physical restaurant dine-in seating, and local food delivery dispatches are operated under the culinary hospitality brand <strong>{settings.brandName}</strong> (FSSAI License: <span className="font-mono font-bold text-slate-900">{settings.fssaiLicense}</span>).
+              </li>
+              <li>
+                <strong>Agreement Scope:</strong> By interacting with this platform, you expressly recognize <strong>Ceansys Technologies</strong> as the managing technology entity overseeing your digital interactions, communications, and electronic order facilitation.
+              </li>
+            </ul>
+          </section>
+
+          {/* Section 3 */}
+          <section id="eligibility" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
+            <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
+              <Users className="w-4 h-4 text-amber-600" />
+              <span>Section 3</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
+              3. User Eligibility &amp; Account Security
             </h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>
@@ -172,14 +207,14 @@ export const TermsPage: React.FC = () => {
             </ul>
           </section>
 
-          {/* Section 3 */}
+          {/* Section 4 */}
           <section id="orders" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <Clock className="w-4 h-4 text-amber-600" />
-              <span>Section 3</span>
+              <span>Section 4</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              3. Ordering, Menu &amp; Kitchen Acceptance
+              4. Ordering, Menu &amp; Kitchen Acceptance
             </h2>
             <p>
               Every food order placed on our platform constitutes an offer to purchase freshly prepared perishables.
@@ -197,14 +232,14 @@ export const TermsPage: React.FC = () => {
             </ul>
           </section>
 
-          {/* Section 4 */}
+          {/* Section 5 */}
           <section id="pricing" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <CreditCard className="w-4 h-4 text-amber-600" />
-              <span>Section 4</span>
+              <span>Section 5</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              4. Pricing, Taxes, Delivery Charges &amp; Minimum Order
+              5. Pricing, Taxes, Delivery Charges &amp; Minimum Order
             </h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>
@@ -222,14 +257,14 @@ export const TermsPage: React.FC = () => {
             </ul>
           </section>
 
-          {/* Section 5 */}
+          {/* Section 6 */}
           <section id="delivery" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <Truck className="w-4 h-4 text-amber-600" />
-              <span>Section 5</span>
+              <span>Section 6</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              5. Dispatch, Delivery Timeframes &amp; Geo-Coverage
+              6. Dispatch, Delivery Timeframes &amp; Geo-Coverage
             </h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>
@@ -244,14 +279,14 @@ export const TermsPage: React.FC = () => {
             </ul>
           </section>
 
-          {/* Section 6 */}
+          {/* Section 7 */}
           <section id="parties" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>Section 6</span>
+              <span>Section 7</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              6. Bulk Orders &amp; Party Catering Commitments
+              7. Bulk Orders &amp; Party Catering Commitments
             </h2>
             <p>
               Special terms apply to our curated Party Boxes, Corporate Bulk Orders, and Live Counter Catering booked through <Link to="/parties" className="text-amber-700 font-bold hover:underline">/parties</Link>:
@@ -266,14 +301,14 @@ export const TermsPage: React.FC = () => {
             </ul>
           </section>
 
-          {/* Section 7 */}
+          {/* Section 8 */}
           <section id="food-quality" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4 text-amber-600" />
-              <span>Section 7</span>
+              <span>Section 8</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              7. Food Quality, Allergens &amp; Statutory FSSAI Compliance
+              8. Food Quality, Allergens &amp; Statutory FSSAI Compliance
             </h2>
             <p>
               {settings.brandName} is dedicated to culinary hygiene, holding valid licenses from the Food Safety and Standards Authority of India (FSSAI License: <strong>{settings.fssaiLicense}</strong>).
@@ -288,50 +323,50 @@ export const TermsPage: React.FC = () => {
             </ul>
           </section>
 
-          {/* Section 8 */}
+          {/* Section 9 */}
           <section id="ip" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <Lock className="w-4 h-4 text-amber-600" />
-              <span>Section 8</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              8. Intellectual Property &amp; Brand Rights
-            </h2>
-            <p>
-              All brand names, proprietary recipes, menu item titles (including signature burgers, shakes, and sourdough pizzas), logos, artwork, photography, design elements, and platform code are the exclusive intellectual property of <strong>{settings.brandName}</strong>. Any unauthorized copying, commercial scraping, or trademark infringement is strictly prohibited.
-            </p>
-          </section>
-
-          {/* Section 9 */}
-          <section id="liability" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
-            <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
               <span>Section 9</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              9. Limitation of Liability &amp; Force Majeure
+              9. Intellectual Property &amp; Platform Ownership
+            </h2>
+            <p>
+              All software application code, algorithms, databases, user interface designs, and infrastructure developed for this platform are the proprietary intellectual property of <strong>Ceansys Technologies</strong>. All culinary trademarks, brand names, recipes, menu titles, and restaurant imagery are property of <strong>{settings.brandName}</strong>. Any unauthorized copying, reverse engineering, or commercial scraping is strictly prohibited.
+            </p>
+          </section>
+
+          {/* Section 10 */}
+          <section id="liability" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
+            <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <span>Section 10</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
+              10. Limitation of Liability &amp; Force Majeure
             </h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Monetary Liability Cap:</strong> In any circumstance, the aggregate financial liability of {settings.brandName} toward any claim arising out of a food delivery transaction shall be strictly limited to the actual net amount paid by the customer for that specific order.
+                <strong>Monetary Liability Cap:</strong> In any circumstance, the aggregate financial liability of {settings.brandName} and managing technology partner Ceansys Technologies toward any claim arising out of a food delivery transaction shall be strictly limited to the actual net amount paid by the customer for that specific order.
               </li>
               <li>
-                <strong>Force Majeure:</strong> {settings.brandName} shall not be held liable for delayed delivery, transit failures, or kitchen closures caused by events beyond our reasonable control, including severe weather, flooding, strikes, civic road blockages, natural disasters, municipal restrictions, or network communication outages.
+                <strong>Force Majeure:</strong> Neither party shall be held liable for delayed delivery, transit failures, or kitchen closures caused by events beyond reasonable control, including severe weather, flooding, strikes, civic road blockages, natural disasters, municipal restrictions, or network communication outages.
               </li>
             </ul>
           </section>
 
-          {/* Section 10 */}
+          {/* Section 11 */}
           <section id="governing-law" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-3.5 scroll-mt-24">
             <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-xs uppercase tracking-wider">
               <Scale className="w-4 h-4 text-amber-600" />
-              <span>Section 10</span>
+              <span>Section 11</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-              10. Dispute Resolution &amp; Governing Jurisdiction
+              11. Dispute Resolution &amp; Governing Jurisdiction
             </h2>
             <p>
-              These Terms &amp; Conditions are governed by and construed in accordance with the substantive laws of India. Any unresolved dispute, controversy, or claim arising out of or relating to your purchase shall be subject to the exclusive jurisdiction of the competent courts located within the jurisdiction of our registered headquarters.
+              These Terms &amp; Conditions are governed by and construed in accordance with the substantive laws of India. Any unresolved dispute, controversy, or claim arising out of or relating to your purchase or platform usage shall be subject to the exclusive jurisdiction of the competent courts located within the jurisdiction of our registered operating headquarters.
             </p>
           </section>
 

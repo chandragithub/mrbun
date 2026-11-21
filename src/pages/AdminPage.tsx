@@ -2040,6 +2040,34 @@ export const AdminPage: React.FC = () => {
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Template configured under MSG91 OTP Flow.</p>
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      MSG91 OTP Widget ID
+                    </label>
+                    <input 
+                      type="text"
+                      value={brandForm.msg91WidgetId || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, msg91WidgetId: e.target.value }))}
+                      placeholder="e.g. 3667706d6550343738383031"
+                      className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Found in MSG91 Panel → OTP Widget configuration.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      MSG91 Widget Token Auth
+                    </label>
+                    <input 
+                      type="password"
+                      value={brandForm.msg91TokenAuth || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, msg91TokenAuth: e.target.value }))}
+                      placeholder="Enter MSG91 Widget Token Auth"
+                      className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Secures client-side widget and prevents spam/bot attacks.</p>
+                  </div>
                 </div>
               </div>
 
@@ -2494,7 +2522,7 @@ export const AdminPage: React.FC = () => {
 
                 {paymentForm.cardEnabled && (
                   <div className="pt-2 border-t border-slate-200 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
                           Payment Gateway Provider
@@ -2518,7 +2546,20 @@ export const AdminPage: React.FC = () => {
                           type="text"
                           value={paymentForm.cashfreeAppId || ''}
                           onChange={(e) => setPaymentForm(prev => ({ ...prev, cashfreeAppId: e.target.value }))}
-                          placeholder="e.g. CF_LIVE_MRBUN_2026"
+                          placeholder="Enter Cashfree App ID / Client Key"
+                          className="w-full text-xs font-mono font-bold px-3.5 py-2 rounded-xl border border-slate-200 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Cashfree Secret Key
+                        </label>
+                        <input 
+                          type="password"
+                          value={paymentForm.cashfreeSecretKey || ''}
+                          onChange={(e) => setPaymentForm(prev => ({ ...prev, cashfreeSecretKey: e.target.value }))}
+                          placeholder="Enter Cashfree Secret Key"
                           className="w-full text-xs font-mono font-bold px-3.5 py-2 rounded-xl border border-slate-200 bg-white"
                         />
                       </div>

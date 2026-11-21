@@ -137,6 +137,7 @@ export interface StorePaymentOptions {
   cardEnabled: boolean;
   cardGateway: 'cashfree' | 'razorpay' | 'direct';
   cashfreeAppId?: string;
+  cashfreeSecretKey?: string;
   isTestMode: boolean;
 }
 
@@ -153,6 +154,8 @@ export interface StoreSettings {
   fssaiLicense: string;
   msg91AuthKey?: string;
   msg91TemplateId?: string;
+  msg91WidgetId?: string;
+  msg91TokenAuth?: string;
   paymentOptions: StorePaymentOptions;
 }
 

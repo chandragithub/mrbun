@@ -43,6 +43,8 @@ const DEFAULT_SETTINGS = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
+  msg91WidgetId: '3667706d6550343738383031',
+  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -51,7 +53,8 @@ const DEFAULT_SETTINGS = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    cashfreeAppId: '',
+    cashfreeSecretKey: '',
     isTestMode: false
   }
 };
@@ -453,6 +456,8 @@ async function ensureTables(db: any) {
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN about_hero_description TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_auth_key TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_template_id TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_widget_id TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_token_auth TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN assigned_outlet TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN status TEXT DEFAULT "active";'); } catch {}
@@ -516,6 +521,8 @@ export default {
                   fssaiLicense: row.fssai_license || DEFAULT_SETTINGS.fssaiLicense,
                   msg91AuthKey: row.msg91_auth_key || env.MSG91_AUTH_KEY || '',
                   msg91TemplateId: row.msg91_template_id || env.MSG91_TEMPLATE_ID || '',
+                  msg91WidgetId: row.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '',
+                  msg91TokenAuth: row.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '',
                   paymentOptions: JSON.parse(row.payment_options_json || '{}')
                 }
               });
@@ -544,6 +551,8 @@ export default {
           const fssaiLicense = body.fssaiLicense ?? current.fssai_license ?? DEFAULT_SETTINGS.fssaiLicense;
           const msg91AuthKey = body.msg91AuthKey ?? current.msg91_auth_key ?? '';
           const msg91TemplateId = body.msg91TemplateId ?? current.msg91_template_id ?? '';
+          const msg91WidgetId = body.msg91WidgetId ?? current.msg91_widget_id ?? DEFAULT_SETTINGS.msg91WidgetId ?? '';
+          const msg91TokenAuth = body.msg91TokenAuth ?? current.msg91_token_auth ?? DEFAULT_SETTINGS.msg91TokenAuth ?? '';
           
           let paymentOptions = DEFAULT_SETTINGS.paymentOptions;
           if (current.payment_options_json) {
@@ -558,9 +567,9 @@ export default {
               INSERT INTO store_settings (
                 id, brand_name, tagline, logo_url, phone, email, address,
                 about_story, about_hero_title, about_hero_description,
-                fssai_license, msg91_auth_key, msg91_template_id, payment_options_json, updated_at
+                fssai_license, msg91_auth_key, msg91_template_id, msg91_widget_id, msg91_token_auth, payment_options_json, updated_at
               )
-              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
               ON CONFLICT(id) DO UPDATE SET
                 brand_name = excluded.brand_name,
                 tagline = excluded.tagline,
@@ -574,6 +583,8 @@ export default {
                 fssai_license = excluded.fssai_license,
                 msg91_auth_key = excluded.msg91_auth_key,
                 msg91_template_id = excluded.msg91_template_id,
+                msg91_widget_id = excluded.msg91_widget_id,
+                msg91_token_auth = excluded.msg91_token_auth,
                 payment_options_json = excluded.payment_options_json,
                 updated_at = CURRENT_TIMESTAMP
             `).bind(
@@ -589,6 +600,8 @@ export default {
               fssaiLicense,
               msg91AuthKey,
               msg91TemplateId,
+              msg91WidgetId,
+              msg91TokenAuth,
               JSON.stringify(paymentOptions)
             ).run();
           }
@@ -608,6 +621,8 @@ export default {
               fssaiLicense,
               msg91AuthKey,
               msg91TemplateId,
+              msg91WidgetId,
+              msg91TokenAuth,
               paymentOptions
             },
             message: 'Settings updated in Cloudflare D1 database.'
@@ -1466,8 +1481,10 @@ export default {
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
         const templateId = env.MSG91_TEMPLATE_ID || currentSettings.msg91_template_id || '';
+        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
+        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
 
-        // Generate 4-digit OTP code (or 6-digit depending on template)
+        // Generate 4-digit OTP code
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validity
         const otpId = `otp-${Date.now()}`;
@@ -1483,8 +1500,29 @@ export default {
         let sentViaMsg91 = false;
         let msg91Response: any = null;
 
-        // If MSG91 credentials are provided, call live MSG91 OTP API
-        if (authKey) {
+        // Priority 1: MSG91 OTP Widget API (using widgetId and tokenAuth)
+        if (widgetId && tokenAuth) {
+          try {
+            const widgetRes = await fetch('https://api.msg91.com/api/v5/widget/sendOtp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                widgetId,
+                tokenAuth,
+                identifier: `91${cleanPhone}`
+              })
+            });
+            msg91Response = await widgetRes.json();
+            if (msg91Response?.type === 'success' || msg91Response?.message?.toLowerCase?.()?.includes?.('success') || msg91Response?.type !== 'error') {
+              sentViaMsg91 = true;
+            }
+          } catch (e: any) {
+            console.error('MSG91 Widget send error:', e);
+          }
+        }
+
+        // Priority 2: Direct MSG91 v5 OTP API (if authKey provided)
+        if (!sentViaMsg91 && authKey) {
           try {
             const msg91Url = new URL('https://control.msg91.com/api/v5/otp');
             msg91Url.searchParams.set('mobile', `91${cleanPhone}`);
@@ -1512,7 +1550,7 @@ export default {
             ? `OTP sent to +91 ${cleanPhone} via MSG91.` 
             : `OTP sent to +91 ${cleanPhone}.`,
           phone: cleanPhone,
-          devOtp: authKey ? undefined : otp, // Provide demo code when live MSG91 key is not set
+          devOtp: sentViaMsg91 ? undefined : otp,
           sentViaMsg91,
           msg91Status: msg91Response?.type || (sentViaMsg91 ? 'success' : 'dev_mode')
         });
@@ -1525,7 +1563,7 @@ export default {
     if (url.pathname === '/api/auth/verify-otp' && request.method === 'POST') {
       await ensureTables(env.DB);
       try {
-        const { phone, otp } = await request.json() as any;
+        const { phone, otp, reqId } = await request.json() as any;
         const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
         const cleanOtp = (otp || '').toString().trim();
 
@@ -1535,11 +1573,36 @@ export default {
 
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
+        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
+        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
 
         let verified = false;
 
+        // Verify with MSG91 Widget verifyOtp API if widgetId and tokenAuth are present
+        if (widgetId && tokenAuth) {
+          try {
+            const verifyWidgetRes = await fetch('https://api.msg91.com/api/v5/widget/verifyOtp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                widgetId,
+                tokenAuth,
+                identifier: `91${cleanPhone}`,
+                otp: cleanOtp,
+                ...(reqId ? { reqId } : {})
+              })
+            });
+            const widgetData: any = await verifyWidgetRes.json();
+            if (widgetData?.type === 'success' || (widgetData?.message && widgetData.message.toLowerCase().includes('verified'))) {
+              verified = true;
+            }
+          } catch (e) {
+            console.error('MSG91 Widget verify error:', e);
+          }
+        }
+
         // Verify with MSG91 live API if authKey is configured
-        if (authKey) {
+        if (!verified && authKey) {
           try {
             const verifyUrl = new URL('https://control.msg91.com/api/v5/otp/verify');
             verifyUrl.searchParams.set('mobile', `91${cleanPhone}`);

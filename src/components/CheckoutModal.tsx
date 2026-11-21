@@ -48,11 +48,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
     upiEnabled: true,
-    upiId: 'mrbun@upi',
+    upiId: '9552030559@ybl',
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    cashfreeAppId: '',
     isTestMode: false
   };
 

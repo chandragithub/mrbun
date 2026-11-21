@@ -39,6 +39,8 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
+  msg91WidgetId: '3667706d6550343738383031',
+  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -47,7 +49,8 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    cashfreeAppId: '',
+    cashfreeSecretKey: '',
     isTestMode: false
   }
 };

@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
+  msg91WidgetId: '3667706d6550343738383031',
+  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -26,7 +28,8 @@ const DEFAULT_SETTINGS = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    cashfreeAppId: '',
+    cashfreeSecretKey: '',
     isTestMode: false
   }
 };
@@ -59,6 +62,8 @@ async function ensureSettingsTable(db: any) {
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN about_hero_description TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_auth_key TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_template_id TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_widget_id TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_token_auth TEXT;'); } catch {}
   } catch (e) {
     console.warn('ensureSettingsTable notice:', e);
   }
@@ -86,6 +91,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             fssaiLicense: row.fssai_license || DEFAULT_SETTINGS.fssaiLicense,
             msg91AuthKey: row.msg91_auth_key || env.MSG91_AUTH_KEY || '',
             msg91TemplateId: row.msg91_template_id || env.MSG91_TEMPLATE_ID || '',
+            msg91WidgetId: row.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '',
+            msg91TokenAuth: row.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '',
             paymentOptions: JSON.parse(row.payment_options_json || '{}')
           }
         }), { headers: { 'Content-Type': 'application/json' } });
@@ -119,6 +126,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const fssaiLicense = body.fssaiLicense ?? current.fssai_license ?? DEFAULT_SETTINGS.fssaiLicense;
       const msg91AuthKey = body.msg91AuthKey ?? current.msg91_auth_key ?? '';
       const msg91TemplateId = body.msg91TemplateId ?? current.msg91_template_id ?? '';
+      const msg91WidgetId = body.msg91WidgetId ?? current.msg91_widget_id ?? DEFAULT_SETTINGS.msg91WidgetId ?? '';
+      const msg91TokenAuth = body.msg91TokenAuth ?? current.msg91_token_auth ?? DEFAULT_SETTINGS.msg91TokenAuth ?? '';
 
       let paymentOptions = DEFAULT_SETTINGS.paymentOptions;
       if (current.payment_options_json) {
@@ -132,9 +141,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         INSERT INTO store_settings (
           id, brand_name, tagline, logo_url, phone, email, address,
           about_story, about_hero_title, about_hero_description,
-          fssai_license, msg91_auth_key, msg91_template_id, payment_options_json, updated_at
+          fssai_license, msg91_auth_key, msg91_template_id, msg91_widget_id, msg91_token_auth, payment_options_json, updated_at
         )
-        VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET
           brand_name = excluded.brand_name,
           tagline = excluded.tagline,
@@ -148,6 +157,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           fssai_license = excluded.fssai_license,
           msg91_auth_key = excluded.msg91_auth_key,
           msg91_template_id = excluded.msg91_template_id,
+          msg91_widget_id = excluded.msg91_widget_id,
+          msg91_token_auth = excluded.msg91_token_auth,
           payment_options_json = excluded.payment_options_json,
           updated_at = CURRENT_TIMESTAMP
       `).bind(
@@ -163,6 +174,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         fssaiLicense,
         msg91AuthKey,
         msg91TemplateId,
+        msg91WidgetId,
+        msg91TokenAuth,
         JSON.stringify(paymentOptions)
       ).run();
 
@@ -181,6 +194,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           fssaiLicense,
           msg91AuthKey,
           msg91TemplateId,
+          msg91WidgetId,
+          msg91TokenAuth,
           paymentOptions
         },
         message: 'Settings updated in Cloudflare D1 database.'

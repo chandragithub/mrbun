@@ -142,10 +142,19 @@ export const RefundsPage: React.FC = () => {
             Refunds &amp; Cancellations
           </h1>
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-            At <strong className="text-white">{settings.brandName}</strong>, we take immense pride in crafting each brioche burger, artisan pizza, and beverage with supreme quality. This policy outlines our cancellation windows, refund criteria, and dispute resolutions in full compliance with Indian consumer protection and hospitality standards.
+            At <strong className="text-white">{settings.brandName}</strong>, we take immense pride in crafting each brioche burger, artisan pizza, and beverage with supreme quality. This digital application is maintained and managed by{' '}
+            <a 
+              href="https://ceansys.com" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-amber-400 font-bold hover:underline"
+            >
+              Ceansys Technologies
+            </a>
+            . This policy outlines our cancellation windows, refund criteria, and dispute resolutions in full compliance with Indian consumer protection and digital commerce standards.
           </p>
           <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-2">
-            <span>Standard Perishable Kitchen Policy</span>
+            <span>Managed by Ceansys Technologies</span>
             <span>•</span>
             <span className="font-mono text-amber-400">FSSAI: {settings.fssaiLicense}</span>
             <span>•</span>
