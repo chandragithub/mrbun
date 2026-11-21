@@ -6,6 +6,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+const isLocalDevelopment = 
+  (typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' || 
+     window.location.hostname.endsWith('.local'))) || 
+  Boolean(import.meta.env.DEV);
+
 export const AuthModal: React.FC = () => {
   const { 
     isAuthModalOpen, 
@@ -288,9 +295,6 @@ export const AuthModal: React.FC = () => {
             />
             <div className="text-left">
               <h2 className="text-lg sm:text-xl font-black tracking-tight leading-tight">Welcome to Mr Bun</h2>
-              <span className="text-[10px] bg-amber-500/30 text-amber-100 font-semibold px-2 py-0.5 rounded-full border border-amber-400/30">
-                🔒 MSG91 Verified Auth
-              </span>
             </div>
           </div>
           <p className="text-xs text-amber-100 mt-1 max-w-xs mx-auto">
@@ -369,9 +373,6 @@ export const AuthModal: React.FC = () => {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                       <span>Mobile Phone Number <span className="text-red-500">*</span></span>
-                      <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                        MSG91 OTP Auth
-                      </span>
                     </label>
                     <div className="relative flex items-center">
                       <div className="absolute left-3 flex items-center gap-1 text-slate-500 font-bold text-xs pointer-events-none select-none border-r border-slate-200 pr-2">
@@ -527,8 +528,8 @@ export const AuthModal: React.FC = () => {
                     />
                   </div>
 
-                  {/* Development / Demo Hint Helper */}
-                  {devOtp && (
+                  {/* Development / Demo Hint Helper (Rendered ONLY on local development) */}
+                  {isLocalDevelopment && devOtp && (
                     <div className="bg-slate-100 border border-slate-300 rounded-xl p-2.5 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5 text-slate-700">
                         <KeyRound className="w-4 h-4 text-amber-600" />
@@ -757,7 +758,8 @@ export const AuthModal: React.FC = () => {
                         required
                       />
 
-                      {loginDevOtp && (
+                      {/* Demo OTP Helper (Rendered ONLY on local development) */}
+                      {isLocalDevelopment && loginDevOtp && (
                         <div className="bg-slate-100 border border-slate-300 rounded-xl p-2.5 flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1.5 text-slate-700">
                             <KeyRound className="w-4 h-4 text-amber-600" />
