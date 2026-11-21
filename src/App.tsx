@@ -26,6 +26,8 @@ const AboutPage = lazy(() => import('./pages/AboutPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const OutletsPage = lazy(() => import('./pages/OutletsPage'));
 const FranchisePage = lazy(() => import('./pages/FranchisePage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const RefundsPage = lazy(() => import('./pages/RefundsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Helper to auto scroll to top on route change
@@ -104,6 +106,18 @@ export const MainApp: React.FC = () => {
             <Route
               path="/franchise"
               element={<FranchisePage />}
+            />
+
+            {/* Terms & Conditions */}
+            <Route
+              path="/terms"
+              element={<TermsPage />}
+            />
+
+            {/* Refunds & Cancellations */}
+            <Route
+              path="/refunds"
+              element={<RefundsPage />}
             />
 
             {/* Dedicated Admin Page Route */}

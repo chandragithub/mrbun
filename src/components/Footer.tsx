@@ -13,7 +13,10 @@ import {
   LayoutDashboard,
   UtensilsCrossed,
   Store,
-  Sparkles
+  Sparkles,
+  FileText,
+  RotateCcw,
+  Scale
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
@@ -128,6 +131,18 @@ export const Footer: React.FC = () => {
                   <span>📦 My Orders &amp; Live Tracking</span>
                 </Link>
               </li>
+              <li>
+                <Link to="/terms" className="hover:text-white transition flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Terms &amp; Conditions</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/refunds" className="hover:text-white transition flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Refunds &amp; Cancellations</span>
+                </Link>
+              </li>
               {/* Apply for Franchise Link in Explore Menu */}
               <li>
                 <Link 
@@ -178,7 +193,11 @@ export const Footer: React.FC = () => {
                 </Link>
               )}
 
-              
+              {/* Quick Legal Protection Note */}
+              <div className="pt-2 text-[11px] text-slate-500 flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-amber-500/70 shrink-0" />
+                <span>Fair Dealing &amp; Safe Dining Guarantee</span>
+              </div>
             </div>
           </div>
 
@@ -188,6 +207,14 @@ export const Footer: React.FC = () => {
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>© 2026 {settings.brandName}. All rights reserved. Registered Trademark.</p>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <Link to="/terms" className="text-slate-400 hover:text-amber-400 transition hover:underline">
+              Terms &amp; Conditions
+            </Link>
+            <span>•</span>
+            <Link to="/refunds" className="text-slate-400 hover:text-amber-400 transition hover:underline">
+              Refunds &amp; Cancellations
+            </Link>
+            <span>•</span>
             <Link to="/franchise" className="text-amber-400 font-bold hover:underline flex items-center gap-1">
               <span>Apply for Franchise</span>
             </Link>

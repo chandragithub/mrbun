@@ -182,3 +182,17 @@ export interface Outlet {
   seatingCapacity: string;
   isFlagship?: boolean;
 }
+
+export interface FranchiseModel {
+  id: string;
+  title: string;
+  badge: string;
+  area: string; // Space Required (e.g. '250 – 450 sq ft')
+  investment: string; // Approx. Investment (e.g. '₹12 – 18 Lakhs')
+  roi: string; // Expected ROI (e.g. '10 – 14 Months')
+  desc: string; // Description
+  highlights: string[]; // List of bullet points
+  orderIndex?: number;
+  isActive?: boolean;
+}
+

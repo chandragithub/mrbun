@@ -7,10 +7,12 @@ import {
   StoreSettings,
   StoreOffer,
   Outlet,
-  PartyPackage
+  PartyPackage,
+  FranchiseModel
 } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { PARTY_PACKAGES } from '../data/partyPackages';
+import { INITIAL_FRANCHISE_MODELS } from '../data/franchiseModels';
 
 // Local Cache Keys for Instant UI rendering & Offline Resilience
 const SETTINGS_STORAGE_KEY = 'mrbun_settings_v3';
@@ -18,6 +20,7 @@ const PRODUCTS_STORAGE_KEY = 'mrbun_products_v3';
 const OFFERS_STORAGE_KEY = 'mrbun_offers_v3';
 const OUTLETS_STORAGE_KEY = 'mrbun_outlets_v3';
 const PACKAGES_STORAGE_KEY = 'mrbun_packages_v3';
+const FRANCHISE_MODELS_STORAGE_KEY = 'mrbun_franchise_models_v1';
 const USERS_STORAGE_KEY = 'mrbun_users_db_v2';
 const ORDERS_STORAGE_KEY = 'mrbun_orders_db_v2';
 const PARTY_ORDERS_STORAGE_KEY = 'mrbun_party_orders_db_v2';
@@ -1068,6 +1071,65 @@ export const dbService = {
     await apiCall(`/api/packages/${id}`, {
       method: 'DELETE'
     });
+
+    return true;
+  },
+
+  // 7b. Franchise Models / Formats (CRUD in Cloudflare D1 & Local Cache)
+  getFranchiseModels: async (): Promise<FranchiseModel[]> => {
+    const res = await apiCall<{ success: boolean; models: FranchiseModel[] }>('/api/franchise-models');
+    if (res.success && res.data?.models && res.data.models.length > 0) {
+      const models = res.data.models;
+      setStoredData(FRANCHISE_MODELS_STORAGE_KEY, models);
+      return models;
+    }
+    return getStoredData<FranchiseModel[]>(FRANCHISE_MODELS_STORAGE_KEY, INITIAL_FRANCHISE_MODELS);
+  },
+
+  fetchFranchiseModelsFromD1: async (): Promise<FranchiseModel[]> => {
+    return dbService.getFranchiseModels();
+  },
+
+  saveFranchiseModel: async (model: FranchiseModel): Promise<FranchiseModel> => {
+    const models = getStoredData<FranchiseModel[]>(FRANCHISE_MODELS_STORAGE_KEY, INITIAL_FRANCHISE_MODELS);
+    const idx = models.findIndex(m => m.id === model.id);
+
+    if (idx >= 0) {
+      models[idx] = model;
+    } else {
+      models.push(model);
+    }
+
+    setStoredData(FRANCHISE_MODELS_STORAGE_KEY, models);
+    window.dispatchEvent(new CustomEvent('mrbun-franchise-models-changed', { detail: models }));
+
+    // Persist to Cloudflare D1
+    try {
+      await apiCall('/api/franchise-models', {
+        method: 'POST',
+        body: JSON.stringify(model)
+      });
+    } catch (e) {
+      console.warn('Syncing franchise model to D1 error:', e);
+    }
+
+    return model;
+  },
+
+  deleteFranchiseModel: async (id: string): Promise<boolean> => {
+    const models = getStoredData<FranchiseModel[]>(FRANCHISE_MODELS_STORAGE_KEY, INITIAL_FRANCHISE_MODELS);
+    const filtered = models.filter(m => m.id !== id);
+    setStoredData(FRANCHISE_MODELS_STORAGE_KEY, filtered);
+    window.dispatchEvent(new CustomEvent('mrbun-franchise-models-changed', { detail: filtered }));
+
+    // Delete from Cloudflare D1
+    try {
+      await apiCall(`/api/franchise-models?id=${id}`, {
+        method: 'DELETE'
+      });
+    } catch (e) {
+      console.warn('Deleting franchise model from D1 error:', e);
+    }
 
     return true;
   },

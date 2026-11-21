@@ -176,6 +176,21 @@ CREATE TABLE IF NOT EXISTS franchise_applications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 8b. Franchise Models / Formats Table (Dynamic Admin Customization)
+CREATE TABLE IF NOT EXISTS franchise_models (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    badge TEXT,
+    area TEXT NOT NULL,
+    investment TEXT NOT NULL,
+    roi TEXT NOT NULL,
+    description TEXT NOT NULL,
+    highlights_json TEXT NOT NULL,
+    order_index INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 9. Customer Food & Service Reviews
 CREATE TABLE IF NOT EXISTS reviews (
     id TEXT PRIMARY KEY,

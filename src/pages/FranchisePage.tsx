@@ -17,46 +17,22 @@ import {
 } from 'lucide-react';
 import { FranchiseModal } from '../components/FranchiseModal';
 import { useSettings } from '../context/SettingsContext';
+import { INITIAL_FRANCHISE_MODELS } from '../data/franchiseModels';
 
 export const FranchisePage: React.FC = () => {
-  const { settings } = useSettings();
+  const { settings, franchiseModels } = useSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState('Express Delivery & Takeaway Hub');
+
+  const availableModels = (franchiseModels && franchiseModels.length > 0) ? franchiseModels : INITIAL_FRANCHISE_MODELS;
+  const activeModels = availableModels
+    .filter(m => m.isActive !== false)
+    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
   const handleOpenModelDialog = (modelName: string) => {
     setSelectedModel(modelName);
     setIsModalOpen(true);
   };
-
-  const FRANCHISE_MODELS = [
-    {
-      title: 'Express Delivery & Takeaway Hub',
-      badge: 'Low Capex • Quick Launch',
-      area: '250 – 450 sq ft',
-      investment: '₹12 – 18 Lakhs',
-      roi: '10 – 14 Months',
-      desc: 'Optimized for high-density delivery orders, online aggregators, and quick takeaway counters.',
-      highlights: ['Compact commercial kitchen', 'Low rental footprint', 'Online order dispatch engine', '2-3 staff operation']
-    },
-    {
-      title: 'Flagship Diner & Cafe',
-      badge: 'High Footfall • Maximum Revenue',
-      area: '800 – 1,500 sq ft',
-      investment: '₹28 – 40 Lakhs',
-      roi: '14 – 18 Months',
-      desc: 'Full-fledged experiential fast food diner with live pizza ovens, smash burger counter & party space.',
-      highlights: ['50+ seating dine-in area', 'Private party & birthday zone', 'Instagrammable interiors', 'High ticket dine-in + delivery']
-    },
-    {
-      title: 'Mall Food Court Kiosk',
-      badge: 'Guaranteed Footfall',
-      area: '150 – 300 sq ft',
-      investment: '₹18 – 25 Lakhs',
-      roi: '12 – 15 Months',
-      desc: 'High velocity counter in prime shopping malls, tech parks, or transit hubs with rapid customer turnaround.',
-      highlights: ['Pre-set mall infrastructure', 'Instant brand visibility', 'High margin combo meal sales', 'Standardized plug-and-play setup']
-    }
-  ];
 
   return (
     <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -192,9 +168,9 @@ export const FranchisePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-          {FRANCHISE_MODELS.map((model, idx) => (
+          {activeModels.map((model) => (
             <div
-              key={idx}
+              key={model.id}
               onClick={() => handleOpenModelDialog(model.title)}
               className="bg-white rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group cursor-pointer hover:-translate-y-1"
             >
