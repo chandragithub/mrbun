@@ -1,4 +1,5 @@
 // Cloudflare Pages Function for Orders API (Cloudflare D1 SQLite)
+import { ensureTables } from '../ensureDb';
 
 interface Env {
   DB?: any;
@@ -11,6 +12,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (env.DB) {
     try {
+      await ensureTables(env.DB);
       let query = 'SELECT * FROM orders ORDER BY created_at DESC';
       let stmt = env.DB.prepare(query);
       if (email) {
@@ -42,6 +44,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const orderId = body.id || ('ORD-' + Math.floor(10000 + Math.random() * 90000));
 
     if (env.DB) {
+      await ensureTables(env.DB);
       const stmt = env.DB.prepare(`
         INSERT INTO orders (
           id, user_id, customer_name, customer_email, customer_phone,

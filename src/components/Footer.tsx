@@ -232,12 +232,6 @@ export const Footer: React.FC = () => {
             <Link to="/franchise" className="text-amber-400 font-bold hover:underline flex items-center gap-1">
               <span>Apply for Franchise</span>
             </Link>
-            <span>•</span>
-            <span className="font-mono text-slate-400">FSSAI: {settings.fssaiLicense}</span>
-            <span>•</span>
-            <a href={`tel:${settings.phone}`} className="text-amber-400 hover:underline">{settings.phone}</a>
-            <span>•</span>
-            <a href={`mailto:${settings.email}`} className="text-amber-400 hover:underline">{settings.email}</a>
           </div>
         </div>
 
