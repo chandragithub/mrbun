@@ -45,7 +45,8 @@ import {
   Crown,
   Briefcase,
   Utensils,
-  Store
+  Store,
+  MoreVertical
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -124,6 +125,27 @@ export const AdminPage: React.FC = () => {
   // Quick login state if user is not admin
   const [adminPassword, setAdminPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Kebab Menu State for available settings dropdown
+  const [isKebabOpen, setIsKebabOpen] = useState(false);
+  const kebabRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (kebabRef.current && !kebabRef.current.contains(e.target as Node)) {
+        setIsKebabOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsKebabOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Brand Form State
   const [brandForm, setBrandForm] = useState<StoreSettings>(settings);
@@ -848,6 +870,24 @@ export const AdminPage: React.FC = () => {
   const pendingParties = parties.filter((p) => p.status === 'pending');
   const activeOrders = orders.filter((o) => o.orderStatus !== 'delivered' && o.orderStatus !== 'cancelled');
 
+  const settingsTabsList = [
+    { id: 'payments' as const, label: '6. Cash & Payments', subLabel: 'Cashfree, UPI & Policy', icon: CreditCard },
+    { id: 'brand' as const, label: '1. Store Settings & About Us', subLabel: 'Logo, Phone, Email & Legal', icon: ImageIcon },
+    { id: 'team' as const, label: '7. Team & Staff', subLabel: `Manage roles (${usersList.length} members)`, icon: Users, count: usersList.length },
+    { id: 'packages' as const, label: 'Celebration Packages', subLabel: `Party Combos (${packages.length})`, icon: Sparkles, count: packages.length },
+    { id: 'franchise' as const, label: 'Franchise Formats', subLabel: `Investment Models (${franchiseModels.length})`, icon: Store, count: franchiseModels.length },
+    { id: 'db' as const, label: 'Cloudflare D1 Database', subLabel: 'SQLite Edge Architecture', icon: Server }
+  ];
+
+  const overflowTabsList = [
+    { id: 'outlets' as const, label: '5. Outlets', subLabel: `Store Locations (${outlets.length})`, icon: Building2, count: outlets.length },
+    { id: 'offers' as const, label: '4. Offers & Promos', subLabel: `Active Discounts (${offers.length})`, icon: Tag, count: offers.length },
+    { id: 'menu' as const, label: '3. Dynamic Menu', subLabel: `Dishes & Combos (${products.length})`, icon: ChefHat, count: products.length },
+  ];
+
+  const activeSettingTab = [...settingsTabsList, ...overflowTabsList].find(t => t.id === activeTab);
+  const isSettingActive = Boolean(activeSettingTab);
+
   // If user is not admin, show dedicated Admin Login Gateway
   if (!isAdmin && user?.email !== 'admin@mrbun.in') {
     return (
@@ -1055,162 +1095,215 @@ export const AdminPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Management Navigation Tabs (All 6 Features + Live Orders + DB) */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="flex border-b border-slate-200 bg-slate-50/70 p-2 gap-1.5 overflow-x-auto text-xs font-bold scrollbar-none">
+      {/* Management Navigation Tabs with Responsive Kebab Settings Menu (No Scrollbars) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 p-2 gap-1.5 relative z-30 rounded-t-3xl text-xs font-bold">
           
-          {/* Orders */}
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'orders'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Food Orders ({orders.length})</span>
-            {pendingOrders.length > 0 && (
-              <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                {pendingOrders.length}
-              </span>
+          {/* Visible Primary Operational Tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            {/* Orders */}
+            <button
+              onClick={() => { setActiveTab('orders'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'orders'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Food Orders ({orders.length})</span>
+              {pendingOrders.length > 0 && (
+                <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {pendingOrders.length}
+                </span>
+              )}
+            </button>
+
+            {/* Parties */}
+            <button
+              onClick={() => { setActiveTab('parties'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'parties'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <PartyPopper className="w-4 h-4" />
+              <span>Parties ({parties.length})</span>
+              {pendingParties.length > 0 && (
+                <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {pendingParties.length}
+                </span>
+              )}
+            </button>
+
+            {/* Dynamic Menu */}
+            <button
+              onClick={() => { setActiveTab('menu'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hidden sm:flex ${
+                activeTab === 'menu'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <ChefHat className="w-4 h-4" />
+              <span>Dynamic Menu ({products.length})</span>
+            </button>
+
+            {/* Offers & Promos */}
+            <button
+              onClick={() => { setActiveTab('offers'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hidden md:flex ${
+                activeTab === 'offers'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              <span>Offers ({offers.length})</span>
+            </button>
+
+            {/* Outlets */}
+            <button
+              onClick={() => { setActiveTab('outlets'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hidden xl:flex ${
+                activeTab === 'outlets'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Outlets ({outlets.length})</span>
+            </button>
+          </div>
+
+          {/* Kebab Menu at the End for Available Settings */}
+          <div className="relative shrink-0 ml-auto" ref={kebabRef}>
+            <button
+              type="button"
+              onClick={() => setIsKebabOpen(!isKebabOpen)}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-bold border ${
+                isSettingActive
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : isKebabOpen
+                  ? 'bg-slate-200 text-slate-900 border-slate-300'
+                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-xs'
+              }`}
+              title="Click to view all available settings"
+              aria-label="Available Settings and Tools"
+            >
+              {activeSettingTab ? (
+                <>
+                  <activeSettingTab.icon className="w-4 h-4 shrink-0" />
+                  <span className="max-w-[110px] sm:max-w-[160px] truncate">{activeSettingTab.label}</span>
+                </>
+              ) : (
+                <>
+                  <Sliders className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="hidden sm:inline">Settings</span>
+                </>
+              )}
+              <MoreVertical className={`w-4 h-4 shrink-0 transition-transform ${isKebabOpen ? 'rotate-90' : ''}`} />
+            </button>
+
+            {/* Kebab Dropdown Panel */}
+            {isKebabOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                      Available Settings &amp; Tools
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsKebabOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="py-1.5 space-y-1 max-h-[380px] overflow-y-auto">
+                  {settingsTabsList.map(item => {
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          setIsKebabOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-3 text-xs ${
+                          isActive
+                            ? 'bg-amber-500 text-white font-black shadow-xs'
+                            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-lg shrink-0 ${isActive ? 'bg-amber-600/50 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold truncate">{item.label}</p>
+                          <p className={`text-[10px] truncate ${isActive ? 'text-amber-100' : 'text-slate-400'}`}>
+                            {item.subLabel}
+                          </p>
+                        </div>
+                        {item.count !== undefined && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {item.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {/* Responsive Overflow Section (Shown on smaller screens) */}
+                  <div className="xl:hidden pt-2 border-t border-slate-100 mt-2">
+                    <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      More Management Tabs
+                    </p>
+                    {overflowTabsList.map(item => {
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsKebabOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl transition flex items-center gap-3 text-xs ${
+                            isActive
+                              ? 'bg-amber-500 text-white font-black shadow-xs'
+                              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isActive ? 'bg-amber-600/50 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                            <item.icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold truncate">{item.label}</p>
+                            <p className={`text-[10px] truncate ${isActive ? 'text-amber-100' : 'text-slate-400'}`}>
+                              {item.subLabel}
+                            </p>
+                          </div>
+                          {item.count !== undefined && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {item.count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             )}
-          </button>
-
-          {/* Party Bookings */}
-          <button
-            onClick={() => setActiveTab('parties')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'parties'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <PartyPopper className="w-4 h-4" />
-            <span>Parties ({parties.length})</span>
-            {pendingParties.length > 0 && (
-              <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                {pendingParties.length}
-              </span>
-            )}
-          </button>
-
-          {/* Celebration Packages */}
-          <button
-            onClick={() => setActiveTab('packages')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'packages'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Celebration Packages ({packages.length})</span>
-          </button>
-
-          {/* Franchise Formats */}
-          <button
-            onClick={() => setActiveTab('franchise')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'franchise'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Store className="w-4 h-4" />
-            <span>Franchise Formats ({franchiseModels.length})</span>
-          </button>
-
-          {/* 1. Store Settings & About Us */}
-          <button
-            onClick={() => setActiveTab('brand')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'brand'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ImageIcon className="w-4 h-4" />
-            <span>1. Store Settings &amp; About Us</span>
-          </button>
-
-          {/* 3. Upload Menu Dynamically */}
-          <button
-            onClick={() => setActiveTab('menu')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'menu'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ChefHat className="w-4 h-4" />
-            <span>3. Dynamic Menu ({products.length})</span>
-          </button>
-
-          {/* 4. Set Offers Dynamically */}
-          <button
-            onClick={() => setActiveTab('offers')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'offers'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Tag className="w-4 h-4" />
-            <span>4. Offers &amp; Promos ({offers.length})</span>
-          </button>
-
-          {/* 5. Add Multiple Outlets */}
-          <button
-            onClick={() => setActiveTab('outlets')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'outlets'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>5. Outlets ({outlets.length})</span>
-          </button>
-
-          {/* 6. Cash & Payment Gateways */}
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'payments'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>6. Cash &amp; Payments</span>
-          </button>
-
-          {/* 7. Team & Staff Role Assignment */}
-          <button
-            onClick={() => setActiveTab('team')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'team'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>7. Team &amp; Staff ({usersList.length})</span>
-          </button>
-
-          {/* Edge Architecture */}
-          <button
-            onClick={() => setActiveTab('db')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'db'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Server className="w-4 h-4" />
-            <span>Cloudflare D1</span>
-          </button>
+          </div>
         </div>
 
         {/* TAB 1: FOOD ORDERS */}
