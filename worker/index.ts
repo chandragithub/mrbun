@@ -479,6 +479,7 @@ async function ensureTables(db: any) {
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
+    const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname.endsWith('.local');
 
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
@@ -1681,15 +1682,39 @@ export default {
           }
         }
 
+        // Production Response: Validate with actual API
+        if (sentViaMsg91) {
+          return jsonResponse({
+            success: true,
+            message: `OTP sent to +91 ${cleanPhone} via MSG91 SMS.`,
+            phone: cleanPhone,
+            sentViaMsg91: true,
+            devOtp: isLocalhost ? otp : undefined
+          });
+        }
+
+        // In Production: If MSG91 failed, return exact MSG91 feedback
+        if (!isLocalhost) {
+          const errorMsg = msg91Response?.message || (
+            !authKey && !widgetId
+              ? 'MSG91 credentials not configured. Please enter your MSG91 Auth Key & Template ID in Admin Portal -> Store Settings.'
+              : 'Failed to send SMS via MSG91. Please verify MSG91 balance, Auth Key, or Template ID.'
+          );
+          return jsonResponse({
+            success: false,
+            error: errorMsg,
+            msg91Details: msg91Response
+          }, 400);
+        }
+
+        // Local Development Fallback: allow testing without live SMS
         return jsonResponse({
           success: true,
-          message: sentViaMsg91 
-            ? `OTP sent to +91 ${cleanPhone} via MSG91.` 
-            : `OTP sent to +91 ${cleanPhone}.`,
+          message: `[DEV MODE] OTP generated for +91 ${cleanPhone}.`,
           phone: cleanPhone,
-          devOtp: sentViaMsg91 ? undefined : otp,
-          sentViaMsg91,
-          msg91Status: msg91Response?.type || (sentViaMsg91 ? 'success' : 'dev_mode')
+          devOtp: otp,
+          sentViaMsg91: false,
+          isDevMode: true
         });
       } catch (err: any) {
         return jsonResponse({ success: false, error: err.message }, 500);
@@ -1756,7 +1781,7 @@ export default {
           }
         }
 
-        // Database / Fallback verification
+        // Database verification (OTP dispatched and stored in D1)
         if (!verified && env.DB) {
           const record: any = await env.DB.prepare(`
             SELECT * FROM otp_verifications 
@@ -1764,13 +1789,13 @@ export default {
             ORDER BY created_at DESC LIMIT 1
           `).bind(cleanPhone, cleanOtp, Date.now()).first();
 
-          if (record || cleanOtp === '1234') {
+          if (record) {
             verified = true;
           }
         }
 
-        // Demo fallback for test phone numbers
-        if (!verified && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
+        // Demo fallback - ONLY permitted on localhost / local development
+        if (!verified && isLocalhost && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
           verified = true;
         }
 
@@ -1876,14 +1901,17 @@ export default {
           if (env.DB) {
             const record: any = await env.DB.prepare(`
               SELECT * FROM otp_verifications 
-              WHERE phone = ? AND (otp = ? OR otp = '1234')
+              WHERE phone = ? AND otp = ?
               ORDER BY created_at DESC LIMIT 1
             `).bind(cleanPhone, otp).first();
-            if (record || otp === '1234') {
+            if (record) {
               otpOk = true;
             }
           }
-          if (!otpOk && otp !== '1234' && cleanPhone !== '9876543210') {
+          if (!otpOk && isLocalhost && (otp === '1234' || cleanPhone === '9876543210')) {
+            otpOk = true;
+          }
+          if (!otpOk) {
             return jsonResponse({ success: false, error: 'Invalid or expired phone verification OTP.' }, 400);
           }
         }
@@ -1953,24 +1981,76 @@ export default {
           return jsonResponse({ success: false, error: 'Valid 10-digit mobile number and OTP code required.' }, 400);
         }
 
-        // Verify OTP
+        // Verify OTP with MSG91 live API or D1
         let verified = false;
-        if (env.DB) {
+
+        const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
+        const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
+        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
+        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
+
+        // 1. Direct MSG91 v5 verify if authKey is configured
+        if (authKey) {
+          try {
+            const verifyUrl = new URL('https://control.msg91.com/api/v5/otp/verify');
+            verifyUrl.searchParams.set('mobile', `91${cleanPhone}`);
+            verifyUrl.searchParams.set('otp', cleanOtp);
+            verifyUrl.searchParams.set('authkey', authKey);
+
+            const res = await fetch(verifyUrl.toString(), {
+              method: 'GET',
+              headers: { 'authkey': authKey }
+            });
+            const data: any = await res.json();
+            if (data.type === 'success' || (data.message && data.message.toLowerCase().includes('verified'))) {
+              verified = true;
+            }
+          } catch (e) {
+            console.error('MSG91 verify API error:', e);
+          }
+        }
+
+        // 2. MSG91 Widget verify
+        if (!verified && widgetId && tokenAuth) {
+          try {
+            const verifyWidgetRes = await fetch('https://api.msg91.com/api/v5/widget/verifyOtp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                widgetId,
+                tokenAuth,
+                identifier: `91${cleanPhone}`,
+                otp: cleanOtp
+              })
+            });
+            const widgetData: any = await verifyWidgetRes.json();
+            if (widgetData?.type === 'success' || (widgetData?.message && widgetData.message.toLowerCase().includes('verified'))) {
+              verified = true;
+            }
+          } catch (e) {
+            console.error('MSG91 Widget verify error:', e);
+          }
+        }
+
+        // 3. Database verification (dispatched and recorded in D1)
+        if (!verified && env.DB) {
           const record: any = await env.DB.prepare(`
             SELECT * FROM otp_verifications 
-            WHERE phone = ? AND (otp = ? OR otp = '1234')
+            WHERE phone = ? AND otp = ? AND expires_at > ?
             ORDER BY created_at DESC LIMIT 1
-          `).bind(cleanPhone, cleanOtp).first();
-          if (record || cleanOtp === '1234') {
+          `).bind(cleanPhone, cleanOtp, Date.now()).first();
+          if (record) {
             verified = true;
           }
         }
-        if (!verified && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
+
+        // 4. Local development bypass - ONLY on localhost
+        if (!verified && isLocalhost && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
           verified = true;
         }
 
         if (!verified) {
-          return jsonResponse({ success: false, error: 'Invalid or expired OTP code.' }, 400);
+          return jsonResponse({ success: false, error: 'Invalid or expired OTP code. Please enter the correct SMS code.' }, 400);
         }
 
         // Find or create customer

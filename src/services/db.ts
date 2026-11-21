@@ -31,7 +31,7 @@ const isLocalEnvironment =
     (window.location.hostname === 'localhost' || 
      window.location.hostname === '127.0.0.1' || 
      window.location.hostname.endsWith('.local'))) || 
-  Boolean(import.meta.env.DEV);
+  Boolean((import.meta as any).env?.DEV);
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   brandName: 'Mr Bun',
