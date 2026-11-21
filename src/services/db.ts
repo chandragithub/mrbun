@@ -593,11 +593,27 @@ export const dbService = {
       body: JSON.stringify({ phone })
     });
     if (res.success && res.data) {
+      if (!res.data.success && !isLocalEnvironment) {
+        return {
+          success: false,
+          error: res.data.error || 'Failed to dispatch OTP SMS via MSG91.'
+        };
+      }
       return res.data;
     }
+
+    // In production, report actual API/network failure
+    if (!isLocalEnvironment) {
+      return {
+        success: false,
+        error: res.error || 'Failed to communicate with SMS service. Please verify your connection or try again.'
+      };
+    }
+
+    // Local Development Fallback: allow testing without SMS credits
     return {
       success: true,
-      message: `OTP sent to ${phone}`,
+      message: `[DEV] OTP sent to ${phone}`,
       devOtp: '1234'
     };
   },
@@ -610,10 +626,11 @@ export const dbService = {
     if (res.success && res.data?.success) {
       return res.data;
     }
-    if (otp === '1234') {
-      return { success: true, message: 'Phone number verified successfully!' };
+    // Only permit local bypass if running in local development environment
+    if (isLocalEnvironment && otp === '1234') {
+      return { success: true, message: 'Phone number verified successfully! (Dev Mode)' };
     }
-    return { success: false, error: res.data?.error || res.error || 'Invalid OTP code' };
+    return { success: false, error: res.data?.error || res.error || 'Invalid OTP code. Please enter the correct code.' };
   },
 
   login: async (identifier: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
@@ -730,7 +747,8 @@ export const dbService = {
       return { success: true, user: res.data.user };
     }
 
-    if (otp === '1234') {
+    // Only permit local bypass on local development
+    if (isLocalEnvironment && otp === '1234') {
       const user: User = {
         id: 'usr_' + Date.now(),
         name: `Customer ${cleanPhone.slice(-4)}`,
