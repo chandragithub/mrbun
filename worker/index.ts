@@ -11,6 +11,8 @@ export interface Env {
   FSSAI_LICENSE?: string;
   MSG91_AUTH_KEY?: string;
   MSG91_TEMPLATE_ID?: string;
+  CASHFREE_APP_ID?: string;
+  CASHFREE_SECRET_KEY?: string;
 }
 
 const CORS_HEADERS = {
@@ -1020,6 +1022,141 @@ export default {
           }, 201);
         } catch (err: any) {
           return jsonResponse({ success: false, error: err.message }, 400);
+        }
+      }
+
+      // CASHFREE PAYMENT GATEWAY INTEGRATION
+      // 1. Create Cashfree Order & Generate payment_session_id
+      if (url.pathname === '/api/payments/cashfree/create-order' && request.method === 'POST') {
+        try {
+          const body: any = await request.json();
+          const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
+          let paymentOptions: any = {};
+          try {
+            paymentOptions = JSON.parse(currentSettings.payment_options_json || '{}');
+          } catch {}
+
+          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+          const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
+          const isTestMode = paymentOptions.isTestMode === true;
+
+          if (!appId || !secretKey) {
+            return jsonResponse({
+              success: false,
+              error: 'Cashfree credentials not configured. Please set them in Admin Portal -> Payment Options.'
+            }, 400);
+          }
+
+          const orderId = body.orderId || ('ORD-' + Math.floor(10000 + Math.random() * 90000));
+          const orderAmount = Number(body.orderAmount || 0);
+          const customerPhone = (body.customerPhone || '9476088111').replace(/\D/g, '').slice(-10);
+          const customerName = body.customerName || 'Mr Bun Customer';
+          const customerEmail = body.customerEmail || `${customerPhone}@mrbun.in`;
+          const customerId = body.userId || `cust_${customerPhone}`;
+
+          const cfBaseUrl = isTestMode 
+            ? 'https://sandbox.cashfree.com/pg/orders' 
+            : 'https://api.cashfree.com/pg/orders';
+
+          const cfPayload = {
+            order_id: orderId,
+            order_amount: orderAmount,
+            order_currency: 'INR',
+            customer_details: {
+              customer_id: customerId,
+              customer_phone: customerPhone,
+              customer_name: customerName,
+              customer_email: customerEmail
+            },
+            order_meta: {
+              return_url: `${url.origin}/orders?order_id={order_id}`
+            },
+            order_note: `Mr Bun Online Order #${orderId}`
+          };
+
+          const cfRes = await fetch(cfBaseUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-version': '2023-08-01',
+              'x-client-id': appId,
+              'x-client-secret': secretKey
+            },
+            body: JSON.stringify(cfPayload)
+          });
+
+          const cfData: any = await cfRes.json();
+
+          if (!cfRes.ok || !cfData.payment_session_id) {
+            console.error('Cashfree order creation error:', cfData);
+            return jsonResponse({
+              success: false,
+              error: cfData.message || 'Failed to initialize Cashfree payment session. Please verify API ID & Secret Key in Admin Portal.'
+            }, 400);
+          }
+
+          return jsonResponse({
+            success: true,
+            orderId,
+            paymentSessionId: cfData.payment_session_id,
+            cfOrderId: cfData.cf_order_id,
+            isTestMode
+          });
+        } catch (err: any) {
+          console.error('Cashfree create-order exception:', err);
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
+      // 2. Verify Cashfree Payment Status
+      if (url.pathname === '/api/payments/cashfree/verify-order' && request.method === 'POST') {
+        try {
+          const body: any = await request.json();
+          const orderId = body.orderId;
+          if (!orderId) {
+            return jsonResponse({ success: false, error: 'Order ID is required.' }, 400);
+          }
+
+          const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
+          let paymentOptions: any = {};
+          try {
+            paymentOptions = JSON.parse(currentSettings.payment_options_json || '{}');
+          } catch {}
+
+          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+          const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
+          const isTestMode = paymentOptions.isTestMode === true;
+
+          const cfBaseUrl = isTestMode 
+            ? `https://sandbox.cashfree.com/pg/orders/${orderId}` 
+            : `https://api.cashfree.com/pg/orders/${orderId}`;
+
+          const cfRes = await fetch(cfBaseUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-version': '2023-08-01',
+              'x-client-id': appId,
+              'x-client-secret': secretKey
+            }
+          });
+
+          const cfData: any = await cfRes.json();
+          const isPaid = cfData.order_status === 'PAID';
+
+          if (isPaid && env.DB) {
+            await env.DB.prepare('UPDATE orders SET payment_status = "paid" WHERE id = ?').bind(orderId).run();
+          }
+
+          return jsonResponse({
+            success: true,
+            orderId,
+            orderStatus: cfData.order_status,
+            isPaid,
+            cfOrder: cfData
+          });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
         }
       }
 

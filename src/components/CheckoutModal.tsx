@@ -66,7 +66,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [orderNotes, setOrderNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'cod'>(defaultMethod);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+
+  // Dynamic Cashfree SDK loader helper
+  const loadCashfreeSdk = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      if (typeof (window as any).Cashfree === 'function') {
+        return resolve((window as any).Cashfree);
+      }
+      const existing = document.querySelector('script[src*="cashfree.com"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve((window as any).Cashfree));
+        existing.addEventListener('error', () => reject(new Error('Failed to load Cashfree checkout library.')));
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.async = true;
+      script.onload = () => resolve((window as any).Cashfree);
+      script.onerror = () => reject(new Error('Failed to load Cashfree checkout library.'));
+      document.head.appendChild(script);
+    });
+  };
 
   // Sync with user profile whenever user details update
   React.useEffect(() => {
@@ -142,8 +164,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPaymentError(null);
+
     if (!name || !phone || (deliveryType === 'delivery' && !address)) {
-      alert('Please fill in your name, contact phone, and delivery address.');
+      setPaymentError('Please fill in your name, contact phone, and delivery address.');
       return;
     }
 
@@ -153,7 +177,103 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         ? 'Store Takeaway - Mr Bun Central Counter' 
         : `${address} ${landmark ? `(Landmark: ${landmark})` : ''}`.trim();
 
+      const orderId = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
+
+      // Handle CASHFREE GATEWAY (card payment mode)
+      if (paymentMethod === 'card') {
+        // 1. Request Cashfree payment session from backend
+        const cfRes = await dbService.createCashfreeOrder({
+          orderId,
+          orderAmount: totalAmount,
+          customerPhone: phone || user.phone,
+          customerName: name || user.name,
+          customerEmail: email || user.email,
+          userId: user.id
+        });
+
+        if (!cfRes.success || !cfRes.paymentSessionId) {
+          setIsPlacing(false);
+          setPaymentError(
+            cfRes.error || 'Failed to initiate Cashfree payment gateway session. Please try again or choose an alternate payment option.'
+          );
+          return;
+        }
+
+        // 2. Initialize Cashfree Web SDK v3
+        let cashfreeSdk: any;
+        try {
+          cashfreeSdk = await loadCashfreeSdk();
+        } catch (loadErr: any) {
+          setIsPlacing(false);
+          setPaymentError('Could not load Cashfree payment SDK. Please try an alternate payment mode.');
+          return;
+        }
+
+        const cashfreeInstance = cashfreeSdk({
+          mode: cfRes.isTestMode || paymentOpts.isTestMode ? 'sandbox' : 'production'
+        });
+
+        // 3. Open Cashfree Popup Checkout Modal
+        let checkoutResult: any = null;
+        try {
+          checkoutResult = await cashfreeInstance.checkout({
+            paymentSessionId: cfRes.paymentSessionId,
+            redirectTarget: '_modal'
+          });
+        } catch (sdkErr: any) {
+          console.warn('Cashfree modal error:', sdkErr);
+        }
+
+        // 4. Verify payment status with server
+        let verifyRes: any = null;
+        try {
+          verifyRes = await dbService.verifyCashfreeOrder(orderId);
+        } catch (vErr) {
+          console.warn('Verification request error:', vErr);
+        }
+
+        const isPaid = (verifyRes && verifyRes.isPaid) || Boolean(checkoutResult?.paymentDetails);
+
+        if (!isPaid) {
+          // Payment was not completed or user closed modal
+          setIsPlacing(false);
+          const failureMsg = 
+            checkoutResult?.error?.message || 
+            (verifyRes && verifyRes.orderStatus ? `Cashfree payment status: ${verifyRes.orderStatus}` : null) ||
+            'Payment was not completed. You can retry or choose an alternate payment option below (UPI or Cash on Delivery).';
+          setPaymentError(failureMsg);
+          return;
+        }
+
+        // 5. Payment Successful! Create the confirmed order in DB
+        const createdOrder = await dbService.createOrder({
+          id: orderId,
+          userId: user.id,
+          customerName: name,
+          customerEmail: email || user.email,
+          customerPhone: phone || user.phone,
+          deliveryType,
+          deliveryAddress: fullAddress,
+          items,
+          subtotal,
+          discount,
+          tax,
+          deliveryFee,
+          totalAmount,
+          paymentMethod: 'card',
+          paymentStatus: 'paid',
+          orderStatus: 'pending', // Starts as pending owner approval
+          orderNotes: orderNotes.trim() || undefined
+        });
+
+        clearCart();
+        setPlacedOrder(createdOrder);
+        return;
+      }
+
+      // Handle UPI & Cash on Delivery (Instant creation)
       const createdOrder = await dbService.createOrder({
+        id: orderId,
         userId: user.id,
         customerName: name,
         customerEmail: email || user.email,
@@ -174,9 +294,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       clearCart();
       setPlacedOrder(createdOrder);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to place order. Please call 9476088111.');
+      setPaymentError(err?.message || 'Failed to place order. Please try again or call 9476088111.');
     } finally {
       setIsPlacing(false);
     }
@@ -385,9 +505,43 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             {/* Payment Method Selector */}
             <div>
-              <h3 className="text-xs font-extrabold uppercase text-amber-800 tracking-wider mb-2">
-                3. Select Payment Mode
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-extrabold uppercase text-amber-800 tracking-wider">
+                  3. Select Payment Mode
+                </h3>
+                {paymentError && (
+                  <span className="text-[10px] text-red-600 font-bold animate-pulse">
+                    ⚠️ Action required: Select an alternate method or retry
+                  </span>
+                )}
+              </div>
+
+              {/* Payment Failure / Cancel Notice */}
+              {paymentError && (
+                <div className="mb-3.5 bg-red-50 border-2 border-red-300 rounded-2xl p-4 text-xs space-y-2 animate-in fade-in slide-in-from-top-1 shadow-xs">
+                  <div className="flex items-start gap-2.5 text-red-900 font-bold">
+                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-black text-red-950">Payment Not Successful</p>
+                      <p className="text-xs text-red-800 font-medium mt-0.5 leading-relaxed">{paymentError}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentError(null)}
+                      className="text-red-400 hover:text-red-700 p-1 rounded-lg hover:bg-red-100 transition"
+                      aria-label="Dismiss alert"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="bg-white/90 rounded-xl p-2.5 border border-red-200 text-[11px] text-red-800 flex items-center gap-2">
+                    <span className="text-base shrink-0">💡</span>
+                    <span>
+                      Don't worry, your cart is intact! You can <strong>retry Cashfree</strong> or choose an alternate option below like <strong>UPI Online Pay</strong> or <strong>Cash Payment</strong>.
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 
@@ -395,7 +549,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 {paymentOpts.upiEnabled && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('upi')}
+                    onClick={() => {
+                      setPaymentMethod('upi');
+                      setPaymentError(null);
+                    }}
                     className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                       paymentMethod === 'upi'
                         ? 'border-amber-500 bg-amber-50/90 ring-2 ring-amber-500/20'
@@ -413,11 +570,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </button>
                 )}
 
-                {/* Card Option */}
+                {/* Card Option (Cashfree) */}
                 {paymentOpts.cardEnabled && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('card')}
+                    onClick={() => {
+                      setPaymentMethod('card');
+                      setPaymentError(null);
+                    }}
                     className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                       paymentMethod === 'card'
                         ? 'border-amber-500 bg-amber-50/90 ring-2 ring-amber-500/20'
@@ -427,14 +587,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <div className="flex items-center justify-between">
                       <CreditCard className="w-5 h-5 text-amber-600" />
                       <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded">
-                        {paymentOpts.cardGateway === 'cashfree' ? 'Cashfree' : 'Cards'}
+                        {paymentOpts.cardGateway === 'cashfree' ? 'Cashfree Gateway' : 'Cards'}
                       </span>
                     </div>
                     <div className="mt-2">
                       <p className="text-xs font-bold text-slate-900">
                         {paymentOpts.cardGateway === 'cashfree' ? 'Cashfree Payments' : 'Card / NetBanking'}
                       </p>
-                      <p className="text-[10px] text-slate-500">Visa, Mastercard, RuPay</p>
+                      <p className="text-[10px] text-slate-500">Cards, NetBanking, UPI</p>
                     </div>
                   </button>
                 )}
@@ -443,7 +603,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 {paymentOpts.cashEnabled && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('cod')}
+                    onClick={() => {
+                      setPaymentMethod('cod');
+                      setPaymentError(null);
+                    }}
                     className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                       paymentMethod === 'cod'
                         ? 'border-red-500 bg-red-50/70 ring-2 ring-red-500/20'
@@ -483,10 +646,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <CreditCard className="w-8 h-8 text-blue-600 shrink-0" />
                   <div className="text-xs">
                     <p className="font-bold text-slate-900">
-                      {paymentOpts.cardGateway === 'cashfree' ? 'Secured by Cashfree Payments' : 'Secure Online 256-Bit SSL Payment'}
+                      {paymentOpts.cardGateway === 'cashfree' ? 'Secured by Cashfree Payments Gateway' : 'Secure Online 256-Bit SSL Payment'}
                     </p>
                     <p className="text-[11px] text-slate-500">
-                      Supports all major Indian Debit &amp; Credit Cards, NetBanking{paymentOpts.isTestMode ? ' [Sandbox Test Mode Active]' : ''}.
+                      Opens official Cashfree payment modal. Supports all Debit &amp; Credit Cards, NetBanking, and Wallets{paymentOpts.isTestMode ? ' [Sandbox Active]' : ''}.
                     </p>
                   </div>
                 </div>
@@ -518,10 +681,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <button
                 type="submit"
                 disabled={isPlacing}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-amber-500/25 transition transform active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-amber-500/25 transition transform active:scale-98 disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {isPlacing ? (
-                  <span>Dispatching order to kitchen owner...</span>
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>
+                      {paymentMethod === 'card' 
+                        ? 'Opening Cashfree Gateway...' 
+                        : 'Dispatching order to kitchen owner...'}
+                    </span>
+                  </span>
                 ) : (
                   <>
                     <span>Confirm Order &amp; Pay ₹{totalAmount}</span>

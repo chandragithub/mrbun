@@ -49,7 +49,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: '',
+    cashfreeAppId: '135031343aa764f0a6ea5362ff73130531',
     cashfreeSecretKey: '',
     isTestMode: false
   }
@@ -829,9 +829,9 @@ export const dbService = {
   },
 
   // 6. Food Orders & Owner Approvals Workflow in Cloudflare D1
-  createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'fssaiLicense'>): Promise<Order> => {
+  createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'fssaiLicense'> & { id?: string }): Promise<Order> => {
     const settings = dbService.getSettings();
-    const orderId = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
+    const orderId = orderData.id || ('ORD-' + Math.floor(10000 + Math.random() * 90000));
     const now = new Date().toISOString();
 
     const adminNotification: NotificationDispatch = {
@@ -1152,6 +1152,74 @@ export const dbService = {
       success: true,
       referenceId: 'FRAN-' + Math.floor(1000 + Math.random() * 9000),
       message: 'Franchise inquiry registered with Mr Bun Desk.'
+    };
+  },
+
+  // 9. Cashfree Payment Gateway Integration
+  createCashfreeOrder: async (data: {
+    orderId?: string;
+    orderAmount: number;
+    customerPhone: string;
+    customerName: string;
+    customerEmail?: string;
+    userId?: string;
+  }): Promise<{
+    success: boolean;
+    orderId?: string;
+    paymentSessionId?: string;
+    cfOrderId?: string;
+    isTestMode?: boolean;
+    error?: string;
+  }> => {
+    const res = await apiCall<{
+      success: boolean;
+      orderId?: string;
+      paymentSessionId?: string;
+      cfOrderId?: string;
+      isTestMode?: boolean;
+      error?: string;
+    }>('/api/payments/cashfree/create-order', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+
+    if (res.success && res.data?.success && res.data.paymentSessionId) {
+      return res.data;
+    }
+
+    return {
+      success: false,
+      error: res.data?.error || res.error || 'Failed to initiate Cashfree payment session.'
+    };
+  },
+
+  verifyCashfreeOrder: async (orderId: string): Promise<{
+    success: boolean;
+    orderId?: string;
+    orderStatus?: string;
+    isPaid?: boolean;
+    cfOrder?: any;
+    error?: string;
+  }> => {
+    const res = await apiCall<{
+      success: boolean;
+      orderId?: string;
+      orderStatus?: string;
+      isPaid?: boolean;
+      cfOrder?: any;
+      error?: string;
+    }>('/api/payments/cashfree/verify-order', {
+      method: 'POST',
+      body: JSON.stringify({ orderId })
+    });
+
+    if (res.success && res.data) {
+      return res.data;
+    }
+
+    return {
+      success: false,
+      error: res.data?.error || res.error || 'Failed to verify Cashfree payment.'
     };
   }
 };

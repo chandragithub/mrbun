@@ -39,7 +39,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   try {
     const body: any = await request.json();
-    const orderId = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
+    const orderId = body.id || ('ORD-' + Math.floor(10000 + Math.random() * 90000));
 
     if (env.DB) {
       const stmt = env.DB.prepare(`
