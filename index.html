@@ -18,5 +18,56 @@
   <body class="bg-[#FFFDF7] text-slate-800 antialiased selection:bg-amber-400 selection:text-amber-950 min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Cashfree Web JS SDK v3 for Instant Online Payment Gateway -->
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+
+    <!-- MSG91 OTP Widget SDK Integration -->
+    <script type="text/javascript">
+      window.configuration = {
+        widgetId: "3667706d6550343738383031",
+        tokenAuth: "551095TZsDtgzbxo16b016ebaP1",
+        exposeMethods: true,
+        success: function (data) {
+          try {
+            window.dispatchEvent(new CustomEvent('msg91-otp-success', { detail: data }));
+          } catch (e) {}
+        },
+        failure: function (error) {
+          try {
+            window.dispatchEvent(new CustomEvent('msg91-otp-failure', { detail: error }));
+          } catch (e) {}
+        }
+      };
+
+      (function loadOtpScript(urls) {
+        var i = 0;
+        function attempt() {
+          var s = document.createElement('script');
+          s.src = urls[i];
+          s.async = true;
+          s.onload = function () {
+            if (typeof window.initSendOTP === 'function') {
+              try {
+                window.initSendOTP(window.configuration);
+              } catch (err) {
+                console.warn('MSG91 initSendOTP warning:', err);
+              }
+            }
+          };
+          s.onerror = function () {
+            i++;
+            if (i < urls.length) {
+              attempt();
+            }
+          };
+          document.head.appendChild(s);
+        }
+        attempt();
+      })([
+        'https://verify.msg91.com/otp-provider.js',
+        'https://verify.phone91.com/otp-provider.js'
+      ]);
+    </script>
   </body>
 </html>

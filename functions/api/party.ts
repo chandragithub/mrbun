@@ -1,4 +1,5 @@
 // Cloudflare Pages Function for Party & Bulk Catering API (Cloudflare D1 SQLite)
+import { ensureTables } from '../ensureDb';
 
 interface Env {
   DB?: any;
@@ -9,6 +10,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (env.DB) {
     try {
+      await ensureTables(env.DB);
       const { results } = await env.DB.prepare('SELECT * FROM party_orders ORDER BY created_at DESC').all();
       return new Response(JSON.stringify({ success: true, partyBookings: results }), {
         headers: { 'Content-Type': 'application/json' },
@@ -34,6 +36,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const partyId = 'PARTY-' + Math.floor(100 + Math.random() * 900);
 
     if (env.DB) {
+      await ensureTables(env.DB);
       const stmt = env.DB.prepare(`
         INSERT INTO party_orders (
           id, user_id, full_name, phone, email, event_type, guest_count,

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { StoreSettings, StoreOffer, Outlet, Product, PartyPackage } from '../types';
+import { StoreSettings, StoreOffer, Outlet, Product, PartyPackage, FranchiseModel } from '../types';
 import { dbService, DEFAULT_STORE_SETTINGS } from '../services/db';
 
 interface SettingsContextType {
@@ -17,6 +17,9 @@ interface SettingsContextType {
   packages: PartyPackage[];
   savePackage: (pkg: PartyPackage) => Promise<PartyPackage>;
   deletePackage: (id: string) => Promise<boolean>;
+  franchiseModels: FranchiseModel[];
+  saveFranchiseModel: (model: FranchiseModel) => Promise<FranchiseModel>;
+  deleteFranchiseModel: (id: string) => Promise<boolean>;
   refreshAll: () => Promise<void>;
 }
 
@@ -35,6 +38,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [offers, setOffers] = useState<StoreOffer[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [packages, setPackages] = useState<PartyPackage[]>([]);
+  const [franchiseModels, setFranchiseModels] = useState<FranchiseModel[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -53,6 +57,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const pkgs = await dbService.getPartyPackages();
       setPackages(pkgs);
+
+      const fModels = await dbService.getFranchiseModels();
+      setFranchiseModels(fModels);
 
       // 3. Sync latest settings and offers from Cloudflare D1
       const liveSettings = await dbService.fetchSettingsFromD1();
@@ -104,11 +111,19 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
+    const handleFranchiseModelsChange = (e: Event) => {
+      const customEvent = e as CustomEvent<FranchiseModel[]>;
+      if (customEvent.detail) {
+        setFranchiseModels(customEvent.detail);
+      }
+    };
+
     window.addEventListener('mrbun-settings-changed', handleSettingsChange);
     window.addEventListener('mrbun-products-changed', handleProductsChange);
     window.addEventListener('mrbun-offers-changed', handleOffersChange);
     window.addEventListener('mrbun-outlets-changed', handleOutletsChange);
     window.addEventListener('mrbun-packages-changed', handlePackagesChange);
+    window.addEventListener('mrbun-franchise-models-changed', handleFranchiseModelsChange);
 
     return () => {
       window.removeEventListener('mrbun-settings-changed', handleSettingsChange);
@@ -116,6 +131,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       window.removeEventListener('mrbun-offers-changed', handleOffersChange);
       window.removeEventListener('mrbun-outlets-changed', handleOutletsChange);
       window.removeEventListener('mrbun-packages-changed', handlePackagesChange);
+      window.removeEventListener('mrbun-franchise-models-changed', handleFranchiseModelsChange);
     };
   }, [loadData]);
 
@@ -179,6 +195,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return res;
   };
 
+  const saveFranchiseModel = async (model: FranchiseModel): Promise<FranchiseModel> => {
+    const saved = await dbService.saveFranchiseModel(model);
+    const updated = await dbService.getFranchiseModels();
+    setFranchiseModels(updated);
+    return saved;
+  };
+
+  const deleteFranchiseModel = async (id: string): Promise<boolean> => {
+    const res = await dbService.deleteFranchiseModel(id);
+    const updated = await dbService.getFranchiseModels();
+    setFranchiseModels(updated);
+    return res;
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -196,6 +226,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         packages,
         savePackage,
         deletePackage,
+        franchiseModels,
+        saveFranchiseModel,
+        deleteFranchiseModel,
         refreshAll: loadData
       }}
     >

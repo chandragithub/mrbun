@@ -7,10 +7,12 @@ import {
   StoreSettings,
   StoreOffer,
   Outlet,
-  PartyPackage
+  PartyPackage,
+  FranchiseModel
 } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { PARTY_PACKAGES } from '../data/partyPackages';
+import { INITIAL_FRANCHISE_MODELS } from '../data/franchiseModels';
 
 // Local Cache Keys for Instant UI rendering & Offline Resilience
 const SETTINGS_STORAGE_KEY = 'mrbun_settings_v3';
@@ -18,10 +20,18 @@ const PRODUCTS_STORAGE_KEY = 'mrbun_products_v3';
 const OFFERS_STORAGE_KEY = 'mrbun_offers_v3';
 const OUTLETS_STORAGE_KEY = 'mrbun_outlets_v3';
 const PACKAGES_STORAGE_KEY = 'mrbun_packages_v3';
+const FRANCHISE_MODELS_STORAGE_KEY = 'mrbun_franchise_models_v1';
 const USERS_STORAGE_KEY = 'mrbun_users_db_v2';
 const ORDERS_STORAGE_KEY = 'mrbun_orders_db_v2';
 const PARTY_ORDERS_STORAGE_KEY = 'mrbun_party_orders_db_v2';
 const CURRENT_USER_KEY = 'mrbun_active_session_v2';
+
+const isLocalEnvironment = 
+  (typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' || 
+     window.location.hostname.endsWith('.local'))) || 
+  Boolean((import.meta as any).env?.DEV);
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   brandName: 'Mr Bun',
@@ -29,13 +39,15 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   logoUrl: '/logo.png',
   phone: '9476088111',
   email: 'contact@mrbun.in',
-  address: 'Mr Bun Central Kitchen & Food Hub, Commercial Avenue, Sector 4',
+  address: 'Chandra Complex, Near Kanyapuram School, Wimberlygunj, Sri Vijayapuram, A & N Islands, 744206',
   aboutStory: 'With his dapper bowler hat, signature mustache, dashing red bow-tie, and enthusiastic thumbs-up, Mr Bun is the embodiment of fast food perfection. Coming straight out of a warm pizza box holding a fresh slice of cheese burst pizza, he reminds us that great food should always be fun, generous, and served with a wink! Whether it\'s a quick midnight craving or a 100-guest birthday bash, Mr Bun brings the party to your table with steaming hot patties, freshly toasted sesame buns, and handcrafted dips.',
   aboutHeroTitle: 'Crafting Happiness in Every Bite & Sip',
   aboutHeroDescription: 'Born from a deep obsession with buttery brioche buns, molten cheese burst crusts, and ice-cold artisan mocktails, Mr Bun is on a mission to elevate fast food into a culinary celebration.',
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
+  msg91WidgetId: '3667706d6550343738383031',
+  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -44,7 +56,8 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    cashfreeAppId: '135031343aa764f0a6ea5362ff73130531',
+    cashfreeSecretKey: '',
     isTestMode: false
   }
 };
@@ -264,7 +277,14 @@ async function apiCall<T>(path: string, options?: RequestInit): Promise<{ succes
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      return { success: false, error: `HTTP ${res.status}` };
+      let serverError = '';
+      try {
+        const errorJson = await res.json();
+        if (errorJson && (errorJson.error || errorJson.message)) {
+          serverError = errorJson.error || errorJson.message;
+        }
+      } catch {}
+      return { success: false, error: serverError || `HTTP ${res.status}` };
     }
 
     const json = await res.json();
@@ -573,11 +593,27 @@ export const dbService = {
       body: JSON.stringify({ phone })
     });
     if (res.success && res.data) {
+      if (!res.data.success && !isLocalEnvironment) {
+        return {
+          success: false,
+          error: res.data.error || 'Failed to dispatch OTP SMS via MSG91.'
+        };
+      }
       return res.data;
     }
+
+    // In production, report actual API/network failure
+    if (!isLocalEnvironment) {
+      return {
+        success: false,
+        error: res.error || 'Failed to communicate with SMS service. Please verify your connection or try again.'
+      };
+    }
+
+    // Local Development Fallback: allow testing without SMS credits
     return {
       success: true,
-      message: `OTP sent to ${phone}`,
+      message: `[DEV] OTP sent to ${phone}`,
       devOtp: '1234'
     };
   },
@@ -590,10 +626,11 @@ export const dbService = {
     if (res.success && res.data?.success) {
       return res.data;
     }
-    if (otp === '1234') {
-      return { success: true, message: 'Phone number verified successfully!' };
+    // Only permit local bypass if running in local development environment
+    if (isLocalEnvironment && otp === '1234') {
+      return { success: true, message: 'Phone number verified successfully! (Dev Mode)' };
     }
-    return { success: false, error: res.data?.error || res.error || 'Invalid OTP code' };
+    return { success: false, error: res.data?.error || res.error || 'Invalid OTP code. Please enter the correct code.' };
   },
 
   login: async (identifier: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
@@ -710,7 +747,8 @@ export const dbService = {
       return { success: true, user: res.data.user };
     }
 
-    if (otp === '1234') {
+    // Only permit local bypass on local development
+    if (isLocalEnvironment && otp === '1234') {
       const user: User = {
         id: 'usr_' + Date.now(),
         name: `Customer ${cleanPhone.slice(-4)}`,
@@ -823,9 +861,9 @@ export const dbService = {
   },
 
   // 6. Food Orders & Owner Approvals Workflow in Cloudflare D1
-  createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'fssaiLicense'>): Promise<Order> => {
+  createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'fssaiLicense'> & { id?: string }): Promise<Order> => {
     const settings = dbService.getSettings();
-    const orderId = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
+    const orderId = orderData.id || ('ORD-' + Math.floor(10000 + Math.random() * 90000));
     const now = new Date().toISOString();
 
     const adminNotification: NotificationDispatch = {
@@ -1072,6 +1110,65 @@ export const dbService = {
     return true;
   },
 
+  // 7b. Franchise Models / Formats (CRUD in Cloudflare D1 & Local Cache)
+  getFranchiseModels: async (): Promise<FranchiseModel[]> => {
+    const res = await apiCall<{ success: boolean; models: FranchiseModel[] }>('/api/franchise-models');
+    if (res.success && res.data?.models && res.data.models.length > 0) {
+      const models = res.data.models;
+      setStoredData(FRANCHISE_MODELS_STORAGE_KEY, models);
+      return models;
+    }
+    return getStoredData<FranchiseModel[]>(FRANCHISE_MODELS_STORAGE_KEY, INITIAL_FRANCHISE_MODELS);
+  },
+
+  fetchFranchiseModelsFromD1: async (): Promise<FranchiseModel[]> => {
+    return dbService.getFranchiseModels();
+  },
+
+  saveFranchiseModel: async (model: FranchiseModel): Promise<FranchiseModel> => {
+    const models = getStoredData<FranchiseModel[]>(FRANCHISE_MODELS_STORAGE_KEY, INITIAL_FRANCHISE_MODELS);
+    const idx = models.findIndex(m => m.id === model.id);
+
+    if (idx >= 0) {
+      models[idx] = model;
+    } else {
+      models.push(model);
+    }
+
+    setStoredData(FRANCHISE_MODELS_STORAGE_KEY, models);
+    window.dispatchEvent(new CustomEvent('mrbun-franchise-models-changed', { detail: models }));
+
+    // Persist to Cloudflare D1
+    try {
+      await apiCall('/api/franchise-models', {
+        method: 'POST',
+        body: JSON.stringify(model)
+      });
+    } catch (e) {
+      console.warn('Syncing franchise model to D1 error:', e);
+    }
+
+    return model;
+  },
+
+  deleteFranchiseModel: async (id: string): Promise<boolean> => {
+    const models = getStoredData<FranchiseModel[]>(FRANCHISE_MODELS_STORAGE_KEY, INITIAL_FRANCHISE_MODELS);
+    const filtered = models.filter(m => m.id !== id);
+    setStoredData(FRANCHISE_MODELS_STORAGE_KEY, filtered);
+    window.dispatchEvent(new CustomEvent('mrbun-franchise-models-changed', { detail: filtered }));
+
+    // Delete from Cloudflare D1
+    try {
+      await apiCall(`/api/franchise-models?id=${id}`, {
+        method: 'DELETE'
+      });
+    } catch (e) {
+      console.warn('Deleting franchise model from D1 error:', e);
+    }
+
+    return true;
+  },
+
   // 8. Franchise Expression of Interest in Cloudflare D1
   submitFranchise: async (formData: any): Promise<{ success: boolean; referenceId?: string; message?: string }> => {
     const res = await apiCall<{ success: boolean; referenceId?: string; message?: string }>('/api/franchise', {
@@ -1087,6 +1184,74 @@ export const dbService = {
       success: true,
       referenceId: 'FRAN-' + Math.floor(1000 + Math.random() * 9000),
       message: 'Franchise inquiry registered with Mr Bun Desk.'
+    };
+  },
+
+  // 9. Cashfree Payment Gateway Integration
+  createCashfreeOrder: async (data: {
+    orderId?: string;
+    orderAmount: number;
+    customerPhone: string;
+    customerName: string;
+    customerEmail?: string;
+    userId?: string;
+  }): Promise<{
+    success: boolean;
+    orderId?: string;
+    paymentSessionId?: string;
+    cfOrderId?: string;
+    isTestMode?: boolean;
+    error?: string;
+  }> => {
+    const res = await apiCall<{
+      success: boolean;
+      orderId?: string;
+      paymentSessionId?: string;
+      cfOrderId?: string;
+      isTestMode?: boolean;
+      error?: string;
+    }>('/api/payments/cashfree/create-order', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+
+    if (res.success && res.data?.success && res.data.paymentSessionId) {
+      return res.data;
+    }
+
+    return {
+      success: false,
+      error: res.data?.error || res.error || 'Failed to initiate Cashfree payment session.'
+    };
+  },
+
+  verifyCashfreeOrder: async (orderId: string): Promise<{
+    success: boolean;
+    orderId?: string;
+    orderStatus?: string;
+    isPaid?: boolean;
+    cfOrder?: any;
+    error?: string;
+  }> => {
+    const res = await apiCall<{
+      success: boolean;
+      orderId?: string;
+      orderStatus?: string;
+      isPaid?: boolean;
+      cfOrder?: any;
+      error?: string;
+    }>('/api/payments/cashfree/verify-order', {
+      method: 'POST',
+      body: JSON.stringify({ orderId })
+    });
+
+    if (res.success && res.data) {
+      return res.data;
+    }
+
+    return {
+      success: false,
+      error: res.data?.error || res.error || 'Failed to verify Cashfree payment.'
     };
   }
 };

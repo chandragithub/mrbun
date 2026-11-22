@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS store_settings (
     about_hero_title TEXT,
     about_hero_description TEXT,
     fssai_license TEXT NOT NULL,
+    msg91_auth_key TEXT,
+    msg91_template_id TEXT,
+    msg91_widget_id TEXT,
+    msg91_token_auth TEXT,
     payment_options_json TEXT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -173,6 +177,21 @@ CREATE TABLE IF NOT EXISTS franchise_applications (
     property_area TEXT,
     prior_experience TEXT,
     status TEXT DEFAULT 'new_inquiry',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8b. Franchise Models / Formats Table (Dynamic Admin Customization)
+CREATE TABLE IF NOT EXISTS franchise_models (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    badge TEXT,
+    area TEXT NOT NULL,
+    investment TEXT NOT NULL,
+    roi TEXT NOT NULL,
+    description TEXT NOT NULL,
+    highlights_json TEXT NOT NULL,
+    order_index INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

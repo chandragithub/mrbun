@@ -13,7 +13,10 @@ import {
   LayoutDashboard,
   UtensilsCrossed,
   Store,
-  Sparkles
+  Sparkles,
+  FileText,
+  RotateCcw,
+  Scale
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
@@ -128,6 +131,18 @@ export const Footer: React.FC = () => {
                   <span>📦 My Orders &amp; Live Tracking</span>
                 </Link>
               </li>
+              <li>
+                <Link to="/terms" className="hover:text-white transition flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Terms &amp; Conditions</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/refunds" className="hover:text-white transition flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Refunds &amp; Cancellations</span>
+                </Link>
+              </li>
               {/* Apply for Franchise Link in Explore Menu */}
               <li>
                 <Link 
@@ -178,25 +193,45 @@ export const Footer: React.FC = () => {
                 </Link>
               )}
 
-              
+              {/* Quick Legal Protection Note */}
+              <div className="pt-2 text-[11px] text-slate-500 flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-amber-500/70 shrink-0" />
+                <span>Fair Dealing &amp; Safe Dining Guarantee</span>
+              </div>
             </div>
           </div>
 
         </div>
 
         {/* Bottom copyright row */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© 2026 {settings.brandName}. All rights reserved. Registered Trademark.</p>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="pt-8 border-t border-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="space-y-1 text-center sm:text-left">
+            <p>© 2026 {settings.brandName}. All rights reserved. Registered Trademark.</p>
+            <p className="text-[11px] text-slate-400">
+              This website &amp; digital ordering platform is developed and maintained by{' '}
+              <a 
+                href="https://ceansys.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-amber-400 hover:text-amber-300 font-bold underline decoration-amber-500/50 hover:decoration-amber-300 transition"
+              >
+                Ceansys Technologies
+              </a>
+              .
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
+            <Link to="/terms" className="text-slate-400 hover:text-amber-400 transition hover:underline">
+              Terms &amp; Conditions
+            </Link>
+            <span>•</span>
+            <Link to="/refunds" className="text-slate-400 hover:text-amber-400 transition hover:underline">
+              Refunds &amp; Cancellations
+            </Link>
+            <span>•</span>
             <Link to="/franchise" className="text-amber-400 font-bold hover:underline flex items-center gap-1">
               <span>Apply for Franchise</span>
             </Link>
-            <span>•</span>
-            <span className="font-mono text-slate-400">FSSAI: {settings.fssaiLicense}</span>
-            <span>•</span>
-            <a href={`tel:${settings.phone}`} className="text-amber-400 hover:underline">{settings.phone}</a>
-            <span>•</span>
-            <a href={`mailto:${settings.email}`} className="text-amber-400 hover:underline">{settings.email}</a>
           </div>
         </div>
 

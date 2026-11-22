@@ -11,6 +11,8 @@ export interface Env {
   FSSAI_LICENSE?: string;
   MSG91_AUTH_KEY?: string;
   MSG91_TEMPLATE_ID?: string;
+  CASHFREE_APP_ID?: string;
+  CASHFREE_SECRET_KEY?: string;
 }
 
 const CORS_HEADERS = {
@@ -43,6 +45,8 @@ const DEFAULT_SETTINGS = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
+  msg91WidgetId: '3667706d6550343738383031',
+  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -51,7 +55,8 @@ const DEFAULT_SETTINGS = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: 'CF_LIVE_MRBUN_2026',
+    cashfreeAppId: '',
+    cashfreeSecretKey: '',
     isTestMode: false
   }
 };
@@ -216,6 +221,60 @@ const DEFAULT_PACKAGES = [
   }
 ];
 
+const DEFAULT_FRANCHISE_MODELS = [
+  {
+    id: 'fran-model-1',
+    title: 'Express Delivery & Takeaway Hub',
+    badge: 'Low Capex • Quick Launch',
+    area: '250 – 450 sq ft',
+    investment: '₹12 – 18 Lakhs',
+    roi: '10 – 14 Months',
+    desc: 'Optimized for high-density delivery orders, online aggregators, and quick takeaway counters.',
+    highlights: [
+      'Compact commercial kitchen',
+      'Low rental footprint',
+      'Online order dispatch engine',
+      '2-3 staff operation'
+    ],
+    orderIndex: 1,
+    isActive: true
+  },
+  {
+    id: 'fran-model-2',
+    title: 'Flagship Diner & Cafe',
+    badge: 'High Footfall • Maximum Revenue',
+    area: '800 – 1,500 sq ft',
+    investment: '₹28 – 40 Lakhs',
+    roi: '14 – 18 Months',
+    desc: 'Full-fledged experiential fast food diner with live pizza ovens, smash burger counter & party space.',
+    highlights: [
+      '50+ seating dine-in area',
+      'Private party & birthday zone',
+      'Instagrammable interiors',
+      'High ticket dine-in + delivery'
+    ],
+    orderIndex: 2,
+    isActive: true
+  },
+  {
+    id: 'fran-model-3',
+    title: 'Mall Food Court Kiosk',
+    badge: 'Guaranteed Footfall',
+    area: '150 – 300 sq ft',
+    investment: '₹18 – 25 Lakhs',
+    roi: '12 – 15 Months',
+    desc: 'High velocity counter in prime shopping malls, tech parks, or transit hubs with rapid customer turnaround.',
+    highlights: [
+      'Pre-set mall infrastructure',
+      'Instant brand visibility',
+      'High margin combo meal sales',
+      'Standardized plug-and-play setup'
+    ],
+    orderIndex: 3,
+    isActive: true
+  }
+];
+
 // Helper to ensure D1 tables exist
 async function ensureTables(db: any) {
   if (!db) return;
@@ -235,6 +294,19 @@ async function ensureTables(db: any) {
         fssai_license TEXT NOT NULL,
         payment_options_json TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS franchise_models (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        badge TEXT,
+        area TEXT NOT NULL,
+        investment TEXT NOT NULL,
+        roi TEXT NOT NULL,
+        description TEXT NOT NULL,
+        highlights_json TEXT NOT NULL,
+        order_index INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
@@ -386,6 +458,8 @@ async function ensureTables(db: any) {
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN about_hero_description TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_auth_key TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_template_id TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_widget_id TEXT;'); } catch {}
+    try { await db.exec('ALTER TABLE store_settings ADD COLUMN msg91_token_auth TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN assigned_outlet TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN status TEXT DEFAULT "active";'); } catch {}
@@ -405,6 +479,7 @@ async function ensureTables(db: any) {
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
+    const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname.endsWith('.local');
 
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
@@ -449,6 +524,8 @@ export default {
                   fssaiLicense: row.fssai_license || DEFAULT_SETTINGS.fssaiLicense,
                   msg91AuthKey: row.msg91_auth_key || env.MSG91_AUTH_KEY || '',
                   msg91TemplateId: row.msg91_template_id || env.MSG91_TEMPLATE_ID || '',
+                  msg91WidgetId: row.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '',
+                  msg91TokenAuth: row.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '',
                   paymentOptions: JSON.parse(row.payment_options_json || '{}')
                 }
               });
@@ -477,6 +554,8 @@ export default {
           const fssaiLicense = body.fssaiLicense ?? current.fssai_license ?? DEFAULT_SETTINGS.fssaiLicense;
           const msg91AuthKey = body.msg91AuthKey ?? current.msg91_auth_key ?? '';
           const msg91TemplateId = body.msg91TemplateId ?? current.msg91_template_id ?? '';
+          const msg91WidgetId = body.msg91WidgetId ?? current.msg91_widget_id ?? DEFAULT_SETTINGS.msg91WidgetId ?? '';
+          const msg91TokenAuth = body.msg91TokenAuth ?? current.msg91_token_auth ?? DEFAULT_SETTINGS.msg91TokenAuth ?? '';
           
           let paymentOptions = DEFAULT_SETTINGS.paymentOptions;
           if (current.payment_options_json) {
@@ -491,9 +570,9 @@ export default {
               INSERT INTO store_settings (
                 id, brand_name, tagline, logo_url, phone, email, address,
                 about_story, about_hero_title, about_hero_description,
-                fssai_license, msg91_auth_key, msg91_template_id, payment_options_json, updated_at
+                fssai_license, msg91_auth_key, msg91_template_id, msg91_widget_id, msg91_token_auth, payment_options_json, updated_at
               )
-              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+              VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
               ON CONFLICT(id) DO UPDATE SET
                 brand_name = excluded.brand_name,
                 tagline = excluded.tagline,
@@ -507,6 +586,8 @@ export default {
                 fssai_license = excluded.fssai_license,
                 msg91_auth_key = excluded.msg91_auth_key,
                 msg91_template_id = excluded.msg91_template_id,
+                msg91_widget_id = excluded.msg91_widget_id,
+                msg91_token_auth = excluded.msg91_token_auth,
                 payment_options_json = excluded.payment_options_json,
                 updated_at = CURRENT_TIMESTAMP
             `).bind(
@@ -522,6 +603,8 @@ export default {
               fssaiLicense,
               msg91AuthKey,
               msg91TemplateId,
+              msg91WidgetId,
+              msg91TokenAuth,
               JSON.stringify(paymentOptions)
             ).run();
           }
@@ -541,6 +624,8 @@ export default {
               fssaiLicense,
               msg91AuthKey,
               msg91TemplateId,
+              msg91WidgetId,
+              msg91TokenAuth,
               paymentOptions
             },
             message: 'Settings updated in Cloudflare D1 database.'
@@ -941,6 +1026,141 @@ export default {
         }
       }
 
+      // CASHFREE PAYMENT GATEWAY INTEGRATION
+      // 1. Create Cashfree Order & Generate payment_session_id
+      if (url.pathname === '/api/payments/cashfree/create-order' && request.method === 'POST') {
+        try {
+          const body: any = await request.json();
+          const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
+          let paymentOptions: any = {};
+          try {
+            paymentOptions = JSON.parse(currentSettings.payment_options_json || '{}');
+          } catch {}
+
+          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+          const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
+          const isTestMode = paymentOptions.isTestMode === true;
+
+          if (!appId || !secretKey) {
+            return jsonResponse({
+              success: false,
+              error: 'Cashfree credentials not configured. Please set them in Admin Portal -> Payment Options.'
+            }, 400);
+          }
+
+          const orderId = body.orderId || ('ORD-' + Math.floor(10000 + Math.random() * 90000));
+          const orderAmount = Number(body.orderAmount || 0);
+          const customerPhone = (body.customerPhone || '9476088111').replace(/\D/g, '').slice(-10);
+          const customerName = body.customerName || 'Mr Bun Customer';
+          const customerEmail = body.customerEmail || `${customerPhone}@mrbun.in`;
+          const customerId = body.userId || `cust_${customerPhone}`;
+
+          const cfBaseUrl = isTestMode 
+            ? 'https://sandbox.cashfree.com/pg/orders' 
+            : 'https://api.cashfree.com/pg/orders';
+
+          const cfPayload = {
+            order_id: orderId,
+            order_amount: orderAmount,
+            order_currency: 'INR',
+            customer_details: {
+              customer_id: customerId,
+              customer_phone: customerPhone,
+              customer_name: customerName,
+              customer_email: customerEmail
+            },
+            order_meta: {
+              return_url: `${url.origin}/orders?order_id={order_id}`
+            },
+            order_note: `Mr Bun Online Order #${orderId}`
+          };
+
+          const cfRes = await fetch(cfBaseUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-version': '2023-08-01',
+              'x-client-id': appId,
+              'x-client-secret': secretKey
+            },
+            body: JSON.stringify(cfPayload)
+          });
+
+          const cfData: any = await cfRes.json();
+
+          if (!cfRes.ok || !cfData.payment_session_id) {
+            console.error('Cashfree order creation error:', cfData);
+            return jsonResponse({
+              success: false,
+              error: cfData.message || 'Failed to initialize Cashfree payment session. Please verify API ID & Secret Key in Admin Portal.'
+            }, 400);
+          }
+
+          return jsonResponse({
+            success: true,
+            orderId,
+            paymentSessionId: cfData.payment_session_id,
+            cfOrderId: cfData.cf_order_id,
+            isTestMode
+          });
+        } catch (err: any) {
+          console.error('Cashfree create-order exception:', err);
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
+      // 2. Verify Cashfree Payment Status
+      if (url.pathname === '/api/payments/cashfree/verify-order' && request.method === 'POST') {
+        try {
+          const body: any = await request.json();
+          const orderId = body.orderId;
+          if (!orderId) {
+            return jsonResponse({ success: false, error: 'Order ID is required.' }, 400);
+          }
+
+          const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
+          let paymentOptions: any = {};
+          try {
+            paymentOptions = JSON.parse(currentSettings.payment_options_json || '{}');
+          } catch {}
+
+          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+          const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
+          const isTestMode = paymentOptions.isTestMode === true;
+
+          const cfBaseUrl = isTestMode 
+            ? `https://sandbox.cashfree.com/pg/orders/${orderId}` 
+            : `https://api.cashfree.com/pg/orders/${orderId}`;
+
+          const cfRes = await fetch(cfBaseUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-version': '2023-08-01',
+              'x-client-id': appId,
+              'x-client-secret': secretKey
+            }
+          });
+
+          const cfData: any = await cfRes.json();
+          const isPaid = cfData.order_status === 'PAID';
+
+          if (isPaid && env.DB) {
+            await env.DB.prepare('UPDATE orders SET payment_status = "paid" WHERE id = ?').bind(orderId).run();
+          }
+
+          return jsonResponse({
+            success: true,
+            orderId,
+            orderStatus: cfData.order_status,
+            isPaid,
+            cfOrder: cfData
+          });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
       // POST Approve Order: moves from pending -> confirmed, dispatches customer SMS/Email
       if (url.pathname.endsWith('/approve') && request.method === 'POST') {
         try {
@@ -1257,6 +1477,92 @@ export default {
       }
     }
 
+    // 6c. FRANCHISE MODELS API (CRUD in Cloudflare D1)
+    if (url.pathname === '/api/franchise-models' || url.pathname.startsWith('/api/franchise-models/')) {
+      await ensureTables(env.DB);
+
+      if (request.method === 'GET') {
+        try {
+          if (env.DB) {
+            const { results } = await env.DB.prepare('SELECT * FROM franchise_models ORDER BY order_index ASC, created_at ASC').all();
+            if (results && results.length > 0) {
+              const mapped = results.map((r: any) => ({
+                id: r.id,
+                title: r.title,
+                badge: r.badge || '',
+                area: r.area,
+                investment: r.investment,
+                roi: r.roi,
+                desc: r.description,
+                highlights: r.highlights_json ? JSON.parse(r.highlights_json) : [],
+                orderIndex: r.order_index ?? 0,
+                isActive: r.is_active === 1 || r.is_active === true
+              }));
+              return jsonResponse({ success: true, models: mapped });
+            }
+          }
+          return jsonResponse({ success: true, models: DEFAULT_FRANCHISE_MODELS });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message, models: DEFAULT_FRANCHISE_MODELS }, 200);
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const m: any = await request.json();
+          const modelId = m.id || `fran-model-${Date.now()}`;
+          const highlightsJson = JSON.stringify(Array.isArray(m.highlights) ? m.highlights : []);
+          const isActiveInt = m.isActive === false ? 0 : 1;
+          const orderIndex = typeof m.orderIndex === 'number' ? m.orderIndex : 0;
+
+          if (env.DB) {
+            await env.DB.prepare(`
+              INSERT INTO franchise_models (
+                id, title, badge, area, investment, roi, description, highlights_json, order_index, is_active
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                badge = excluded.badge,
+                area = excluded.area,
+                investment = excluded.investment,
+                roi = excluded.roi,
+                description = excluded.description,
+                highlights_json = excluded.highlights_json,
+                order_index = excluded.order_index,
+                is_active = excluded.is_active
+            `).bind(
+              modelId,
+              m.title || 'Franchise Format',
+              m.badge || '',
+              m.area || '',
+              m.investment || '',
+              m.roi || '',
+              m.desc || '',
+              highlightsJson,
+              orderIndex,
+              isActiveInt
+            ).run();
+          }
+
+          return jsonResponse({ success: true, model: { ...m, id: modelId } }, 201);
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+
+      if (request.method === 'DELETE') {
+        try {
+          const id = url.pathname.replace('/api/franchise-models/', '').replace('/api/franchise-models', '').trim() || url.searchParams.get('id');
+          if (id && env.DB) {
+            await env.DB.prepare('DELETE FROM franchise_models WHERE id = ?').bind(id).run();
+          }
+          return jsonResponse({ success: true, message: `Franchise model ${id} deleted.` });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 500);
+        }
+      }
+    }
+
     // 7. FRANCHISE APPLICATION API
     if (url.pathname === '/api/franchise' && request.method === 'POST') {
       await ensureTables(env.DB);
@@ -1313,8 +1619,10 @@ export default {
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
         const templateId = env.MSG91_TEMPLATE_ID || currentSettings.msg91_template_id || '';
+        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
+        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
 
-        // Generate 4-digit OTP code (or 6-digit depending on template)
+        // Generate 4-digit OTP code
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validity
         const otpId = `otp-${Date.now()}`;
@@ -1330,8 +1638,29 @@ export default {
         let sentViaMsg91 = false;
         let msg91Response: any = null;
 
-        // If MSG91 credentials are provided, call live MSG91 OTP API
-        if (authKey) {
+        // Priority 1: MSG91 OTP Widget API (using widgetId and tokenAuth)
+        if (widgetId && tokenAuth) {
+          try {
+            const widgetRes = await fetch('https://api.msg91.com/api/v5/widget/sendOtp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                widgetId,
+                tokenAuth,
+                identifier: `91${cleanPhone}`
+              })
+            });
+            msg91Response = await widgetRes.json();
+            if (msg91Response?.type === 'success' || msg91Response?.message?.toLowerCase?.()?.includes?.('success') || msg91Response?.type !== 'error') {
+              sentViaMsg91 = true;
+            }
+          } catch (e: any) {
+            console.error('MSG91 Widget send error:', e);
+          }
+        }
+
+        // Priority 2: Direct MSG91 v5 OTP API (if authKey provided)
+        if (!sentViaMsg91 && authKey) {
           try {
             const msg91Url = new URL('https://control.msg91.com/api/v5/otp');
             msg91Url.searchParams.set('mobile', `91${cleanPhone}`);
@@ -1353,15 +1682,39 @@ export default {
           }
         }
 
+        // Production Response: Validate with actual API
+        if (sentViaMsg91) {
+          return jsonResponse({
+            success: true,
+            message: `OTP sent to +91 ${cleanPhone} via MSG91 SMS.`,
+            phone: cleanPhone,
+            sentViaMsg91: true,
+            devOtp: isLocalhost ? otp : undefined
+          });
+        }
+
+        // In Production: If MSG91 failed, return exact MSG91 feedback
+        if (!isLocalhost) {
+          const errorMsg = msg91Response?.message || (
+            !authKey && !widgetId
+              ? 'MSG91 credentials not configured. Please enter your MSG91 Auth Key & Template ID in Admin Portal -> Store Settings.'
+              : 'Failed to send SMS via MSG91. Please verify MSG91 balance, Auth Key, or Template ID.'
+          );
+          return jsonResponse({
+            success: false,
+            error: errorMsg,
+            msg91Details: msg91Response
+          }, 400);
+        }
+
+        // Local Development Fallback: allow testing without live SMS
         return jsonResponse({
           success: true,
-          message: sentViaMsg91 
-            ? `OTP sent to +91 ${cleanPhone} via MSG91.` 
-            : `OTP sent to +91 ${cleanPhone}.`,
+          message: `[DEV MODE] OTP generated for +91 ${cleanPhone}.`,
           phone: cleanPhone,
-          devOtp: authKey ? undefined : otp, // Provide demo code when live MSG91 key is not set
-          sentViaMsg91,
-          msg91Status: msg91Response?.type || (sentViaMsg91 ? 'success' : 'dev_mode')
+          devOtp: otp,
+          sentViaMsg91: false,
+          isDevMode: true
         });
       } catch (err: any) {
         return jsonResponse({ success: false, error: err.message }, 500);
@@ -1372,7 +1725,7 @@ export default {
     if (url.pathname === '/api/auth/verify-otp' && request.method === 'POST') {
       await ensureTables(env.DB);
       try {
-        const { phone, otp } = await request.json() as any;
+        const { phone, otp, reqId } = await request.json() as any;
         const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
         const cleanOtp = (otp || '').toString().trim();
 
@@ -1382,11 +1735,36 @@ export default {
 
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
+        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
+        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
 
         let verified = false;
 
+        // Verify with MSG91 Widget verifyOtp API if widgetId and tokenAuth are present
+        if (widgetId && tokenAuth) {
+          try {
+            const verifyWidgetRes = await fetch('https://api.msg91.com/api/v5/widget/verifyOtp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                widgetId,
+                tokenAuth,
+                identifier: `91${cleanPhone}`,
+                otp: cleanOtp,
+                ...(reqId ? { reqId } : {})
+              })
+            });
+            const widgetData: any = await verifyWidgetRes.json();
+            if (widgetData?.type === 'success' || (widgetData?.message && widgetData.message.toLowerCase().includes('verified'))) {
+              verified = true;
+            }
+          } catch (e) {
+            console.error('MSG91 Widget verify error:', e);
+          }
+        }
+
         // Verify with MSG91 live API if authKey is configured
-        if (authKey) {
+        if (!verified && authKey) {
           try {
             const verifyUrl = new URL('https://control.msg91.com/api/v5/otp/verify');
             verifyUrl.searchParams.set('mobile', `91${cleanPhone}`);
@@ -1403,7 +1781,7 @@ export default {
           }
         }
 
-        // Database / Fallback verification
+        // Database verification (OTP dispatched and stored in D1)
         if (!verified && env.DB) {
           const record: any = await env.DB.prepare(`
             SELECT * FROM otp_verifications 
@@ -1411,13 +1789,13 @@ export default {
             ORDER BY created_at DESC LIMIT 1
           `).bind(cleanPhone, cleanOtp, Date.now()).first();
 
-          if (record || cleanOtp === '1234') {
+          if (record) {
             verified = true;
           }
         }
 
-        // Demo fallback for test phone numbers
-        if (!verified && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
+        // Demo fallback - ONLY permitted on localhost / local development
+        if (!verified && isLocalhost && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
           verified = true;
         }
 
@@ -1523,14 +1901,17 @@ export default {
           if (env.DB) {
             const record: any = await env.DB.prepare(`
               SELECT * FROM otp_verifications 
-              WHERE phone = ? AND (otp = ? OR otp = '1234')
+              WHERE phone = ? AND otp = ?
               ORDER BY created_at DESC LIMIT 1
             `).bind(cleanPhone, otp).first();
-            if (record || otp === '1234') {
+            if (record) {
               otpOk = true;
             }
           }
-          if (!otpOk && otp !== '1234' && cleanPhone !== '9876543210') {
+          if (!otpOk && isLocalhost && (otp === '1234' || cleanPhone === '9876543210')) {
+            otpOk = true;
+          }
+          if (!otpOk) {
             return jsonResponse({ success: false, error: 'Invalid or expired phone verification OTP.' }, 400);
           }
         }
@@ -1600,24 +1981,76 @@ export default {
           return jsonResponse({ success: false, error: 'Valid 10-digit mobile number and OTP code required.' }, 400);
         }
 
-        // Verify OTP
+        // Verify OTP with MSG91 live API or D1
         let verified = false;
-        if (env.DB) {
+
+        const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
+        const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
+        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
+        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
+
+        // 1. Direct MSG91 v5 verify if authKey is configured
+        if (authKey) {
+          try {
+            const verifyUrl = new URL('https://control.msg91.com/api/v5/otp/verify');
+            verifyUrl.searchParams.set('mobile', `91${cleanPhone}`);
+            verifyUrl.searchParams.set('otp', cleanOtp);
+            verifyUrl.searchParams.set('authkey', authKey);
+
+            const res = await fetch(verifyUrl.toString(), {
+              method: 'GET',
+              headers: { 'authkey': authKey }
+            });
+            const data: any = await res.json();
+            if (data.type === 'success' || (data.message && data.message.toLowerCase().includes('verified'))) {
+              verified = true;
+            }
+          } catch (e) {
+            console.error('MSG91 verify API error:', e);
+          }
+        }
+
+        // 2. MSG91 Widget verify
+        if (!verified && widgetId && tokenAuth) {
+          try {
+            const verifyWidgetRes = await fetch('https://api.msg91.com/api/v5/widget/verifyOtp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                widgetId,
+                tokenAuth,
+                identifier: `91${cleanPhone}`,
+                otp: cleanOtp
+              })
+            });
+            const widgetData: any = await verifyWidgetRes.json();
+            if (widgetData?.type === 'success' || (widgetData?.message && widgetData.message.toLowerCase().includes('verified'))) {
+              verified = true;
+            }
+          } catch (e) {
+            console.error('MSG91 Widget verify error:', e);
+          }
+        }
+
+        // 3. Database verification (dispatched and recorded in D1)
+        if (!verified && env.DB) {
           const record: any = await env.DB.prepare(`
             SELECT * FROM otp_verifications 
-            WHERE phone = ? AND (otp = ? OR otp = '1234')
+            WHERE phone = ? AND otp = ? AND expires_at > ?
             ORDER BY created_at DESC LIMIT 1
-          `).bind(cleanPhone, cleanOtp).first();
-          if (record || cleanOtp === '1234') {
+          `).bind(cleanPhone, cleanOtp, Date.now()).first();
+          if (record) {
             verified = true;
           }
         }
-        if (!verified && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
+
+        // 4. Local development bypass - ONLY on localhost
+        if (!verified && isLocalhost && (cleanOtp === '1234' || cleanPhone === '9876543210')) {
           verified = true;
         }
 
         if (!verified) {
-          return jsonResponse({ success: false, error: 'Invalid or expired OTP code.' }, 400);
+          return jsonResponse({ success: false, error: 'Invalid or expired OTP code. Please enter the correct SMS code.' }, 400);
         }
 
         // Find or create customer

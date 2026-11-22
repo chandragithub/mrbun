@@ -44,7 +44,9 @@ import {
   UserPlus,
   Crown,
   Briefcase,
-  Utensils
+  Utensils,
+  Store,
+  MoreVertical
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -59,6 +61,7 @@ import {
   Outlet, 
   StoreSettings,
   PartyPackage,
+  FranchiseModel,
   User,
   UserRole
 } from '../types';
@@ -79,10 +82,13 @@ export const AdminPage: React.FC = () => {
     deleteOutlet,
     packages,
     savePackage,
-    deletePackage
+    deletePackage,
+    franchiseModels,
+    saveFranchiseModel,
+    deleteFranchiseModel
   } = useSettings();
   
-  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'team' | 'db'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'franchise' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'team' | 'db'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [parties, setParties] = useState<PartyOrderBooking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -119,6 +125,27 @@ export const AdminPage: React.FC = () => {
   // Quick login state if user is not admin
   const [adminPassword, setAdminPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Kebab Menu State for available settings dropdown
+  const [isKebabOpen, setIsKebabOpen] = useState(false);
+  const kebabRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (kebabRef.current && !kebabRef.current.contains(e.target as Node)) {
+        setIsKebabOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsKebabOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Brand Form State
   const [brandForm, setBrandForm] = useState<StoreSettings>(settings);
@@ -194,6 +221,23 @@ export const AdminPage: React.FC = () => {
   const [newIncludeItem, setNewIncludeItem] = useState('');
   const [editingIncludeIndex, setEditingIncludeIndex] = useState<number | null>(null);
   const [editingIncludeText, setEditingIncludeText] = useState('');
+
+  // Franchise Models Form State
+  const [isFranchiseModalOpen, setIsFranchiseModalOpen] = useState(false);
+  const [editingFranchiseModel, setEditingFranchiseModel] = useState<FranchiseModel | null>(null);
+  const [franchiseForm, setFranchiseForm] = useState<Partial<FranchiseModel>>({
+    title: '',
+    badge: 'Low Capex • Quick Launch',
+    area: '250 – 450 sq ft',
+    investment: '₹12 – 18 Lakhs',
+    roi: '10 – 14 Months',
+    desc: '',
+    highlights: [],
+    orderIndex: 1,
+    isActive: true
+  });
+  const [newFranchiseHighlight, setNewFranchiseHighlight] = useState('');
+  const [isSavingFranchiseModel, setIsSavingFranchiseModel] = useState(false);
 
   // Payment Options Form State
   const [paymentForm, setPaymentForm] = useState(settings.paymentOptions);
@@ -639,6 +683,104 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // --- FRANCHISE FORMATS HANDLERS ---
+  const handleOpenAddFranchiseModel = () => {
+    setEditingFranchiseModel(null);
+    setFranchiseForm({
+      title: '',
+      badge: 'Low Capex • Quick Launch',
+      area: '250 – 450 sq ft',
+      investment: '₹12 – 18 Lakhs',
+      roi: '10 – 14 Months',
+      desc: '',
+      highlights: [
+        'Compact commercial kitchen',
+        'Low rental footprint',
+        'Online order dispatch engine',
+        '2-3 staff operation'
+      ],
+      orderIndex: (franchiseModels.length + 1),
+      isActive: true
+    });
+    setNewFranchiseHighlight('');
+    setIsFranchiseModalOpen(true);
+  };
+
+  const handleOpenEditFranchiseModel = (m: FranchiseModel) => {
+    setEditingFranchiseModel(m);
+    setFranchiseForm({
+      title: m.title,
+      badge: m.badge,
+      area: m.area,
+      investment: m.investment,
+      roi: m.roi,
+      desc: m.desc,
+      highlights: [...(m.highlights || [])],
+      orderIndex: m.orderIndex ?? 0,
+      isActive: m.isActive !== false
+    });
+    setNewFranchiseHighlight('');
+    setIsFranchiseModalOpen(true);
+  };
+
+  const handleAddFranchiseHighlight = () => {
+    if (!newFranchiseHighlight.trim()) return;
+    setFranchiseForm(prev => ({
+      ...prev,
+      highlights: [...(prev.highlights || []), newFranchiseHighlight.trim()]
+    }));
+    setNewFranchiseHighlight('');
+  };
+
+  const handleDeleteFranchiseHighlight = (index: number) => {
+    setFranchiseForm(prev => ({
+      ...prev,
+      highlights: (prev.highlights || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSaveFranchiseModelForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!franchiseForm.title?.trim() || !franchiseForm.area?.trim()) {
+      alert('Please fill in the format title and space required.');
+      return;
+    }
+
+    setIsSavingFranchiseModel(true);
+    try {
+      const modelToSave: FranchiseModel = {
+        id: editingFranchiseModel ? editingFranchiseModel.id : `fran-model-${Date.now()}`,
+        title: franchiseForm.title.trim(),
+        badge: franchiseForm.badge?.trim() || 'Flexible Format',
+        area: franchiseForm.area.trim(),
+        investment: franchiseForm.investment?.trim() || 'Custom Investment',
+        roi: franchiseForm.roi?.trim() || '12 – 18 Months',
+        desc: franchiseForm.desc?.trim() || '',
+        highlights: (franchiseForm.highlights && franchiseForm.highlights.length > 0)
+          ? franchiseForm.highlights
+          : ['Turnkey Setup', 'High ROI'],
+        orderIndex: Number(franchiseForm.orderIndex) || 0,
+        isActive: franchiseForm.isActive !== false
+      };
+
+      await saveFranchiseModel(modelToSave);
+      setIsFranchiseModalOpen(false);
+      showNotification(`🏪 Franchise format "${modelToSave.title}" saved to Cloudflare D1!`);
+    } catch (err: any) {
+      console.error('Error saving franchise model:', err);
+      showNotification(`⚠️ Error saving franchise format: ${err.message || 'Network error'}`);
+    } finally {
+      setIsSavingFranchiseModel(false);
+    }
+  };
+
+  const handleDeleteFranchiseModelItem = async (m: FranchiseModel) => {
+    if (confirm(`Are you sure you want to delete franchise format "${m.title}"?`)) {
+      await deleteFranchiseModel(m.id);
+      showNotification(`Franchise format "${m.title}" deleted.`);
+    }
+  };
+
   // --- PAYMENT SETTINGS HANDLER ---
   const handleSavePaymentSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -727,6 +869,24 @@ export const AdminPage: React.FC = () => {
   const pendingOrders = orders.filter((o) => o.orderStatus === 'pending');
   const pendingParties = parties.filter((p) => p.status === 'pending');
   const activeOrders = orders.filter((o) => o.orderStatus !== 'delivered' && o.orderStatus !== 'cancelled');
+
+  const settingsTabsList = [
+    { id: 'payments' as const, label: '6. Cash & Payments', subLabel: 'Cashfree, UPI & Policy', icon: CreditCard },
+    { id: 'brand' as const, label: '1. Store Settings & About Us', subLabel: 'Logo, Phone, Email & Legal', icon: ImageIcon },
+    { id: 'team' as const, label: '7. Team & Staff', subLabel: `Manage roles (${usersList.length} members)`, icon: Users, count: usersList.length },
+    { id: 'packages' as const, label: 'Celebration Packages', subLabel: `Party Combos (${packages.length})`, icon: Sparkles, count: packages.length },
+    { id: 'franchise' as const, label: 'Franchise Formats', subLabel: `Investment Models (${franchiseModels.length})`, icon: Store, count: franchiseModels.length },
+    { id: 'db' as const, label: 'Cloudflare D1 Database', subLabel: 'SQLite Edge Architecture', icon: Server }
+  ];
+
+  const overflowTabsList = [
+    { id: 'outlets' as const, label: '5. Outlets', subLabel: `Store Locations (${outlets.length})`, icon: Building2, count: outlets.length },
+    { id: 'offers' as const, label: '4. Offers & Promos', subLabel: `Active Discounts (${offers.length})`, icon: Tag, count: offers.length },
+    { id: 'menu' as const, label: '3. Dynamic Menu', subLabel: `Dishes & Combos (${products.length})`, icon: ChefHat, count: products.length },
+  ];
+
+  const activeSettingTab = [...settingsTabsList, ...overflowTabsList].find(t => t.id === activeTab);
+  const isSettingActive = Boolean(activeSettingTab);
 
   // If user is not admin, show dedicated Admin Login Gateway
   if (!isAdmin && user?.email !== 'admin@mrbun.in') {
@@ -935,149 +1095,215 @@ export const AdminPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Management Navigation Tabs (All 6 Features + Live Orders + DB) */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="flex border-b border-slate-200 bg-slate-50/70 p-2 gap-1.5 overflow-x-auto text-xs font-bold scrollbar-none">
+      {/* Management Navigation Tabs with Responsive Kebab Settings Menu (No Scrollbars) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 p-2 gap-1.5 relative z-30 rounded-t-3xl text-xs font-bold">
           
-          {/* Orders */}
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'orders'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Food Orders ({orders.length})</span>
-            {pendingOrders.length > 0 && (
-              <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                {pendingOrders.length}
-              </span>
+          {/* Visible Primary Operational Tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            {/* Orders */}
+            <button
+              onClick={() => { setActiveTab('orders'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'orders'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Food Orders ({orders.length})</span>
+              {pendingOrders.length > 0 && (
+                <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {pendingOrders.length}
+                </span>
+              )}
+            </button>
+
+            {/* Parties */}
+            <button
+              onClick={() => { setActiveTab('parties'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'parties'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <PartyPopper className="w-4 h-4" />
+              <span>Parties ({parties.length})</span>
+              {pendingParties.length > 0 && (
+                <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {pendingParties.length}
+                </span>
+              )}
+            </button>
+
+            {/* Dynamic Menu */}
+            <button
+              onClick={() => { setActiveTab('menu'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hidden sm:flex ${
+                activeTab === 'menu'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <ChefHat className="w-4 h-4" />
+              <span>Dynamic Menu ({products.length})</span>
+            </button>
+
+            {/* Offers & Promos */}
+            <button
+              onClick={() => { setActiveTab('offers'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hidden md:flex ${
+                activeTab === 'offers'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              <span>Offers ({offers.length})</span>
+            </button>
+
+            {/* Outlets */}
+            <button
+              onClick={() => { setActiveTab('outlets'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hidden xl:flex ${
+                activeTab === 'outlets'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Outlets ({outlets.length})</span>
+            </button>
+          </div>
+
+          {/* Kebab Menu at the End for Available Settings */}
+          <div className="relative shrink-0 ml-auto" ref={kebabRef}>
+            <button
+              type="button"
+              onClick={() => setIsKebabOpen(!isKebabOpen)}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-bold border ${
+                isSettingActive
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : isKebabOpen
+                  ? 'bg-slate-200 text-slate-900 border-slate-300'
+                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-xs'
+              }`}
+              title="Click to view all available settings"
+              aria-label="Available Settings and Tools"
+            >
+              {activeSettingTab ? (
+                <>
+                  <activeSettingTab.icon className="w-4 h-4 shrink-0" />
+                  <span className="max-w-[110px] sm:max-w-[160px] truncate">{activeSettingTab.label}</span>
+                </>
+              ) : (
+                <>
+                  <Sliders className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="hidden sm:inline">Settings</span>
+                </>
+              )}
+              <MoreVertical className={`w-4 h-4 shrink-0 transition-transform ${isKebabOpen ? 'rotate-90' : ''}`} />
+            </button>
+
+            {/* Kebab Dropdown Panel */}
+            {isKebabOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                      Available Settings &amp; Tools
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsKebabOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="py-1.5 space-y-1 max-h-[380px] overflow-y-auto">
+                  {settingsTabsList.map(item => {
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          setIsKebabOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-3 text-xs ${
+                          isActive
+                            ? 'bg-amber-500 text-white font-black shadow-xs'
+                            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-lg shrink-0 ${isActive ? 'bg-amber-600/50 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold truncate">{item.label}</p>
+                          <p className={`text-[10px] truncate ${isActive ? 'text-amber-100' : 'text-slate-400'}`}>
+                            {item.subLabel}
+                          </p>
+                        </div>
+                        {item.count !== undefined && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {item.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {/* Responsive Overflow Section (Shown on smaller screens) */}
+                  <div className="xl:hidden pt-2 border-t border-slate-100 mt-2">
+                    <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      More Management Tabs
+                    </p>
+                    {overflowTabsList.map(item => {
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsKebabOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl transition flex items-center gap-3 text-xs ${
+                            isActive
+                              ? 'bg-amber-500 text-white font-black shadow-xs'
+                              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isActive ? 'bg-amber-600/50 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                            <item.icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold truncate">{item.label}</p>
+                            <p className={`text-[10px] truncate ${isActive ? 'text-amber-100' : 'text-slate-400'}`}>
+                              {item.subLabel}
+                            </p>
+                          </div>
+                          {item.count !== undefined && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {item.count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             )}
-          </button>
-
-          {/* Party Bookings */}
-          <button
-            onClick={() => setActiveTab('parties')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'parties'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <PartyPopper className="w-4 h-4" />
-            <span>Parties ({parties.length})</span>
-            {pendingParties.length > 0 && (
-              <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                {pendingParties.length}
-              </span>
-            )}
-          </button>
-
-          {/* Celebration Packages */}
-          <button
-            onClick={() => setActiveTab('packages')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'packages'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Celebration Packages ({packages.length})</span>
-          </button>
-
-          {/* 1. Store Settings & About Us */}
-          <button
-            onClick={() => setActiveTab('brand')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'brand'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ImageIcon className="w-4 h-4" />
-            <span>1. Store Settings &amp; About Us</span>
-          </button>
-
-          {/* 3. Upload Menu Dynamically */}
-          <button
-            onClick={() => setActiveTab('menu')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'menu'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ChefHat className="w-4 h-4" />
-            <span>3. Dynamic Menu ({products.length})</span>
-          </button>
-
-          {/* 4. Set Offers Dynamically */}
-          <button
-            onClick={() => setActiveTab('offers')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'offers'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Tag className="w-4 h-4" />
-            <span>4. Offers &amp; Promos ({offers.length})</span>
-          </button>
-
-          {/* 5. Add Multiple Outlets */}
-          <button
-            onClick={() => setActiveTab('outlets')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'outlets'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>5. Outlets ({outlets.length})</span>
-          </button>
-
-          {/* 6. Cash & Payment Gateways */}
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'payments'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>6. Cash &amp; Payments</span>
-          </button>
-
-          {/* 7. Team & Staff Role Assignment */}
-          <button
-            onClick={() => setActiveTab('team')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'team'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>7. Team &amp; Staff ({usersList.length})</span>
-          </button>
-
-          {/* Edge Architecture */}
-          <button
-            onClick={() => setActiveTab('db')}
-            className={`py-2.5 px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'db'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Server className="w-4 h-4" />
-            <span>Cloudflare D1</span>
-          </button>
+          </div>
         </div>
 
         {/* TAB 1: FOOD ORDERS */}
@@ -1480,6 +1706,131 @@ export const AdminPage: React.FC = () => {
           </div>
         )}
 
+        {/* TAB: FRANCHISE FORMATS & MODELS */}
+        {activeTab === 'franchise' && (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 font-display flex items-center gap-2">
+                  <Store className="w-5 h-5 text-amber-600" />
+                  <span>Franchise Investment Models &amp; Formats</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Customize the franchise investment models shown on the /franchise page (Area, Investment, ROI, Description, and Bullet Highlights). All changes sync directly to Cloudflare D1.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <a
+                  href="/franchise"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2.5 rounded-xl transition"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Preview Live Page ↗</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={handleOpenAddFranchiseModel}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Franchise Format</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Franchise Models Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {franchiseModels.map((m) => (
+                <div
+                  key={m.id}
+                  className={`bg-white rounded-3xl p-6 border transition-all flex flex-col justify-between group shadow-sm hover:shadow-xl ${
+                    m.isActive !== false ? 'border-amber-200/90' : 'border-slate-200 opacity-70 bg-slate-50/50'
+                  }`}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-block text-[10px] font-extrabold text-amber-800 bg-amber-100 px-3 py-1 rounded-full uppercase">
+                        {m.badge || 'Flexible Format'}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          m.isActive !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {m.isActive !== false ? 'Live on Website' : 'Hidden / Inactive'}
+                        </span>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-mono">
+                          #{m.orderIndex ?? 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 group-hover:text-amber-700 transition">
+                        {m.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        {m.desc}
+                      </p>
+                    </div>
+
+                    <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Space Required:</span>
+                        <strong className="text-slate-800 font-bold">{m.area}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Approx. Investment:</span>
+                        <strong className="text-amber-800 font-bold">{m.investment}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Expected ROI:</span>
+                        <strong className="text-emerald-700 font-bold">{m.roi}</strong>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Model Highlights ({m.highlights?.length || 0}):
+                      </p>
+                      <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                        {m.highlights?.map((h, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>{h}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="p-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditFranchiseModel(m)}
+                      className="flex-1 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit Format</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFranchiseModelItem(m)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                      title="Delete format"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* TAB 3: 1. LOGO, CONTACT, ADDRESS, ABOUT US & FSSAI */}
         {activeTab === 'brand' && (
           <div className="p-6 space-y-8">
@@ -1781,6 +2132,34 @@ export const AdminPage: React.FC = () => {
                       className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Template configured under MSG91 OTP Flow.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      MSG91 OTP Widget ID
+                    </label>
+                    <input 
+                      type="text"
+                      value={brandForm.msg91WidgetId || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, msg91WidgetId: e.target.value }))}
+                      placeholder="e.g. 3667706d6550343738383031"
+                      className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Found in MSG91 Panel → OTP Widget configuration.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      MSG91 Widget Token Auth
+                    </label>
+                    <input 
+                      type="password"
+                      value={brandForm.msg91TokenAuth || ''}
+                      onChange={(e) => setBrandForm(prev => ({ ...prev, msg91TokenAuth: e.target.value }))}
+                      placeholder="Enter MSG91 Widget Token Auth"
+                      className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Secures client-side widget and prevents spam/bot attacks.</p>
                   </div>
                 </div>
               </div>
@@ -2236,7 +2615,7 @@ export const AdminPage: React.FC = () => {
 
                 {paymentForm.cardEnabled && (
                   <div className="pt-2 border-t border-slate-200 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
                           Payment Gateway Provider
@@ -2260,7 +2639,20 @@ export const AdminPage: React.FC = () => {
                           type="text"
                           value={paymentForm.cashfreeAppId || ''}
                           onChange={(e) => setPaymentForm(prev => ({ ...prev, cashfreeAppId: e.target.value }))}
-                          placeholder="e.g. CF_LIVE_MRBUN_2026"
+                          placeholder="Enter Cashfree App ID / Client Key"
+                          className="w-full text-xs font-mono font-bold px-3.5 py-2 rounded-xl border border-slate-200 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Cashfree Secret Key
+                        </label>
+                        <input 
+                          type="password"
+                          value={paymentForm.cashfreeSecretKey || ''}
+                          onChange={(e) => setPaymentForm(prev => ({ ...prev, cashfreeSecretKey: e.target.value }))}
+                          placeholder="Enter Cashfree Secret Key"
                           className="w-full text-xs font-mono font-bold px-3.5 py-2 rounded-xl border border-slate-200 bg-white"
                         />
                       </div>
@@ -3556,6 +3948,229 @@ export const AdminPage: React.FC = () => {
                 >
                   <Check className="w-4 h-4" />
                   <span>{editingStaff ? 'Update Staff Member' : 'Create Staff Member'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Franchise Format Modal (Add/Edit) */}
+      {isFranchiseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8 border border-amber-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                  <Store className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 font-display">
+                    {editingFranchiseModel ? 'Edit Franchise Format' : 'Add New Franchise Format'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    All fields persist directly to Cloudflare D1 SQLite database.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsFranchiseModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFranchiseModelForm} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Title */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Format Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={franchiseForm.title || ''}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g. Express Delivery & Takeaway Hub"
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {/* Badge */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Badge Text (Uppercase Tag)
+                  </label>
+                  <input
+                    type="text"
+                    value={franchiseForm.badge || ''}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, badge: e.target.value }))}
+                    placeholder="e.g. Low Capex • Quick Launch"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Space Required */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Space Required (Area) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={franchiseForm.area || ''}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, area: e.target.value }))}
+                    placeholder="e.g. 250 – 450 sq ft"
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {/* Approx Investment */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Approx. Investment <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={franchiseForm.investment || ''}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, investment: e.target.value }))}
+                    placeholder="e.g. ₹12 – 18 Lakhs"
+                    className="w-full text-xs font-bold text-amber-800 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {/* Expected ROI */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Expected ROI Period <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={franchiseForm.roi || ''}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, roi: e.target.value }))}
+                    placeholder="e.g. 10 – 14 Months"
+                    className="w-full text-xs font-bold text-emerald-700 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={franchiseForm.desc || ''}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, desc: e.target.value }))}
+                    placeholder="e.g. Optimized for high-density delivery orders, online aggregators, and quick takeaway counters."
+                    className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 resize-none"
+                  />
+                </div>
+
+                {/* Order Index & Active Switch */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Display Sort Order
+                  </label>
+                  <input
+                    type="number"
+                    value={franchiseForm.orderIndex ?? 1}
+                    onChange={(e) => setFranchiseForm(prev => ({ ...prev, orderIndex: parseInt(e.target.value) || 0 }))}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex items-center pt-6">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={franchiseForm.isActive !== false}
+                      onChange={(e) => setFranchiseForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                      className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                    />
+                    <span className="text-xs font-bold text-slate-800">
+                      Display Live on Franchise Page
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Highlights Builder */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="block text-xs font-bold text-slate-700">
+                  Model Highlights (Bullet Points)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newFranchiseHighlight}
+                    onChange={(e) => setNewFranchiseHighlight(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddFranchiseHighlight();
+                      }
+                    }}
+                    placeholder="e.g. Compact commercial kitchen, 2-3 staff operation..."
+                    className="flex-1 text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddFranchiseHighlight}
+                    className="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pt-1">
+                  {(franchiseForm.highlights || []).map((h, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-700"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{h}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFranchiseHighlight(idx)}
+                        className="text-slate-400 hover:text-red-500 p-1"
+                        title="Delete highlight"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {(franchiseForm.highlights || []).length === 0 && (
+                    <p className="text-[11px] text-slate-400 italic">No highlights added yet.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsFranchiseModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingFranchiseModel}
+                  className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5"
+                >
+                  <Save className={`w-4 h-4 ${isSavingFranchiseModel ? 'animate-spin' : ''}`} />
+                  <span>{isSavingFranchiseModel ? 'Saving to Database...' : editingFranchiseModel ? 'Update Franchise Format' : 'Create Franchise Format'}</span>
                 </button>
               </div>
             </form>

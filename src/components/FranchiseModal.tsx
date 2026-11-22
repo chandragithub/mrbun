@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { dbService } from '../services/db';
+import { INITIAL_FRANCHISE_MODELS } from '../data/franchiseModels';
 
 interface FranchiseModalProps {
   isOpen: boolean;
@@ -25,7 +26,11 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
   initialModel = 'Express Delivery & Takeaway Hub'
 }) => {
   const { user } = useAuth();
-  const { settings } = useSettings();
+  const { settings, franchiseModels } = useSettings();
+
+  const activeModels = (franchiseModels && franchiseModels.length > 0 ? franchiseModels : INITIAL_FRANCHISE_MODELS)
+    .filter(m => m.isActive !== false)
+    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
   const [fullName, setFullName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -266,9 +271,11 @@ export const FranchiseModal: React.FC<FranchiseModalProps> = ({
                   onChange={(e) => setModelInterested(e.target.value)}
                   className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-amber-500"
                 >
-                  <option value="Express Delivery & Takeaway Hub">Express Delivery &amp; Takeaway Hub (₹12 - 18L)</option>
-                  <option value="Flagship Diner & Cafe">Flagship Diner &amp; Cafe (₹28 - 40L)</option>
-                  <option value="Mall Food Court Kiosk">Mall Food Court Kiosk (₹18 - 25L)</option>
+                  {activeModels.map((model) => (
+                    <option key={model.id} value={model.title}>
+                      {model.title} {model.investment ? `(${model.investment})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
