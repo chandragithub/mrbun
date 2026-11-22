@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/sync-android.js",
+    "build:web": "tsc -b && vite build",
+    "build:android": "npm run build && cap sync android",
+    "sync:android": "node scripts/sync-android.js && cap sync android",
+    "open:android": "cap open android",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
@@ -14,6 +18,9 @@
     "d1:local": "wrangler d1 execute mrbun --local --file=./schema.sql"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

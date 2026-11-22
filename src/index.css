@@ -5,11 +5,15 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
   
   body {
     @apply text-slate-800 bg-[#FFFDF7];
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    touch-action: manipulation;
   }
   
   h1, h2, h3, h4, h5, h6 {

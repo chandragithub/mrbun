@@ -259,13 +259,30 @@ function setStoredData<T>(key: string, data: T): void {
   }
 }
 
+// Detect environment: In Capacitor Android WebView, prefix relative paths with live backend
+const getApiEndpoint = (path: string): string => {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const isCapacitorOrNative = 
+    typeof window !== 'undefined' && 
+    (window.location.protocol === 'capacitor:' || 
+     (window.location.hostname === 'localhost' && window.location.port !== '5173'));
+  
+  const base = (import.meta.env.VITE_API_URL as string) || 
+    (isCapacitorOrNative ? 'https://mrbun.ceansystech.workers.dev' : '');
+  
+  return `${base}${path}`;
+};
+
 // Resilient API Fetch Helper with timeout and fallback
 async function apiCall<T>(path: string, options?: RequestInit): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-    const res = await fetch(path, {
+    const fullUrl = getApiEndpoint(path);
+    const res = await fetch(fullUrl, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
