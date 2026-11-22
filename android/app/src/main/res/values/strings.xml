@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mr Bun</string>
+    <string name="title_activity_main">Mr Bun</string>
+    <string name="package_name">com.mrbun.app</string>
+    <string name="custom_url_scheme">com.mrbun.app</string>
+</resources>
