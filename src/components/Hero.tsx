@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { AnimatedHeroMascot } from './AnimatedHeroMascot';
+import { HeroAnimationVideo } from './HeroAnimationVideo';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -19,6 +21,7 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) => {
   const { settings } = useSettings();
+  const [displayMode, setDisplayMode] = useState<'mascot' | 'video'>('mascot');
   return (
     <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-amber-50 via-orange-50/40 to-[#FFFDF7] pt-4 pb-10 sm:pt-8 sm:pb-16 lg:pt-14 lg:pb-24 border-b border-amber-100/60">
       
@@ -99,46 +102,52 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onOpenPartyModal }) =
 
           </div>
 
-          {/* Right Mascot & Hero Showcase (5 cols) */}
-          <div className="lg:col-span-5 relative flex justify-center items-center mt-4 lg:mt-0">
+          {/* Right Mascot & Hero Showcase (5 cols) - Hidden on mobile view */}
+          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-center items-center mt-4 lg:mt-0">
             
-            {/* Mascot Graphic Container */}
-            <div className="relative group w-full max-w-xs sm:max-w-sm lg:max-w-md">
-              
-              {/* Backing decorative plate */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-amber-400/30 to-red-400/20 rounded-3xl blur-2xl transform group-hover:scale-105 transition-transform duration-500" />
-              
-              <div className="relative bg-white rounded-3xl p-5 shadow-2xl border-4 border-amber-300 transition-transform duration-500 group-hover:-translate-y-1">
-                <img 
-                  src={settings.logoUrl || '/logo.png'} 
-                  alt={`${settings.brandName} Logo`} 
-                  className="w-full h-auto object-contain rounded-2xl animate-float"
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
-                />
+            {/* Showcase Mode Switcher (3D Animation vs Video) */}
+            <div className="inline-flex items-center gap-1.5 bg-amber-100/90 backdrop-blur-sm p-1.5 rounded-2xl mb-3 border border-amber-300 shadow-sm">
+              <button
+                onClick={() => setDisplayMode('mascot')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                  displayMode === 'mascot'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md scale-[1.02]'
+                    : 'text-amber-900 hover:text-amber-950 hover:bg-amber-200/50'
+                }`}
+              >
+                <span>🍔</span>
+                <span>3D Animation</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping inline-block" />
+              </button>
 
-                {/* Floating Badge 1: Rating */}
-                <div className="absolute -top-4 -left-4 sm:-top-5 sm:-left-5 bg-white border border-amber-200 px-3.5 py-2 rounded-2xl shadow-lg flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm">
-                    ★
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">4.9 / 5.0 Rating</p>
-                    <p className="text-[10px] text-slate-500">1,500+ Happy Foodies</p>
-                  </div>
-                </div>
-
-                {/* Floating Badge 2: Bulk Offer */}
-                <div className="absolute -bottom-4 -right-4 sm:-bottom-5 sm:-right-5 bg-gradient-to-r from-red-600 to-amber-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-amber-200" />
-                  <div>
-                    <p className="text-xs font-extrabold uppercase tracking-wide">Party Discount</p>
-                    <p className="text-[11px] font-medium text-amber-100">Up to 20% OFF on Bulk</p>
-                  </div>
-                </div>
-              </div>
-
+              <button
+                onClick={() => setDisplayMode('video')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                  displayMode === 'video'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md scale-[1.02]'
+                    : 'text-amber-900 hover:text-amber-950 hover:bg-amber-200/50'
+                }`}
+              >
+                <span>🎬</span>
+                <span>Video Reel</span>
+              </button>
             </div>
 
+            {displayMode === 'mascot' ? (
+              <AnimatedHeroMascot
+                logoUrl={settings.logoUrl || '/logo.png'}
+                brandName={settings.brandName}
+                onOpenPartyModal={onOpenPartyModal}
+                onExploreMenu={onExploreMenu}
+              />
+            ) : (
+              <HeroAnimationVideo
+                brandName={settings.brandName}
+                logoUrl={settings.logoUrl || '/logo.png'}
+                onOpenPartyModal={onOpenPartyModal}
+                onExploreMenu={onExploreMenu}
+              />
+            )}
           </div>
 
         </div>
