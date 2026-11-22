@@ -59,16 +59,6 @@ export const MobileBottomNav: React.FC = () => {
         <span className="text-[10px] leading-tight tracking-tight text-red-600 font-bold">Parties</span>
       </NavLink>
 
-      {/* 4. Outlets */}
-      <NavLink to="/outlets" className={() => navItemClass('/outlets')}>
-        <div className="relative">
-          <MapPin className="w-5 h-5 mb-0.5" />
-          {location.pathname === '/outlets' && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-600 rounded-full" />
-          )}
-        </div>
-        <span className="text-[10px] leading-tight tracking-tight">Outlets</span>
-      </NavLink>
 
       {/* 5. Cart Drawer Trigger */}
       <button 

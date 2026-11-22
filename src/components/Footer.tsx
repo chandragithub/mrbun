@@ -111,11 +111,7 @@ export const Footer: React.FC = () => {
                   <span>🍔 Full Craving Menu</span>
                 </Link>
               </li>
-              <li>
-                <Link to="/outlets" className="hover:text-white transition flex items-center gap-1.5">
-                  <span>📍 Outlet Details &amp; Dine-in</span>
-                </Link>
-              </li>
+
               <li>
                 <Link to="/about" className="hover:text-white transition flex items-center gap-1.5">
                   <span>🎩 About Mr Bun &amp; Quality</span>

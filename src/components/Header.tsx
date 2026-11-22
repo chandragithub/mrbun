@@ -67,8 +67,8 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="sticky top-0 z-40 bg-white/98 backdrop-blur-md border-b border-amber-100/90 shadow-xs transition-all">
-        {/* 1. Top Announcement Bar */}
-        <div className="bg-gradient-to-r from-amber-700 via-amber-600 to-red-600 text-white text-[11px] sm:text-xs font-medium py-1 sm:py-1.5 px-3 sm:px-6 landscape:hidden md:landscape:block">
+        {/* 1. Top Announcement Bar (Hidden on Mobile View) */}
+        <div className="hidden md:block bg-gradient-to-r from-amber-700 via-amber-600 to-red-600 text-white text-[11px] sm:text-xs font-medium py-1 sm:py-1.5 px-3 sm:px-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 sm:gap-4 overflow-hidden text-ellipsis whitespace-nowrap">
               <span className="flex items-center gap-1.5 shrink-0">
@@ -265,14 +265,14 @@ export const Header: React.FC = () => {
                 </button>
               )}
 
-              {/* Cart Button */}
+              {/* Cart Button (Hidden on mobile view because MobileBottomNav has the Cart button) */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-amber-500/20 transition transform active:scale-95"
+                className="hidden lg:flex relative items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-amber-500/20 transition transform active:scale-95"
                 aria-label="View Cart"
               >
                 <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden md:inline">Cart</span>
+                <span>Cart</span>
                 {totalItemsCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white font-extrabold text-[10px] sm:text-[11px] w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shadow-xs animate-bounce">
                     {totalItemsCount}

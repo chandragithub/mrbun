@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Flame, Sparkles, Star, PartyPopper } from 'lucide-react';
 import { Hero } from '../components/Hero';
-import { ReviewsSection } from '../components/ReviewsSection';
 import { FoodCard } from '../components/FoodCard';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { Product } from '../types';
@@ -163,8 +162,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onCustomizeProduct, onOpenPa
         </div>
       </section>
 
-      {/* Customer Reviews Section */}
-      <ReviewsSection />
     </div>
   );
 };
