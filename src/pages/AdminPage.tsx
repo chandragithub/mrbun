@@ -46,7 +46,8 @@ import {
   Briefcase,
   Utensils,
   Store,
-  MoreVertical
+  MoreVertical,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -63,7 +64,8 @@ import {
   PartyPackage,
   FranchiseModel,
   User,
-  UserRole
+  UserRole,
+  ContactMessage
 } from '../types';
 
 export const AdminPage: React.FC = () => {
@@ -88,9 +90,10 @@ export const AdminPage: React.FC = () => {
     deleteFranchiseModel
   } = useSettings();
   
-  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'franchise' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'team' | 'db'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'parties' | 'packages' | 'franchise' | 'brand' | 'menu' | 'offers' | 'outlets' | 'payments' | 'team' | 'messages' | 'db'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [parties, setParties] = useState<PartyOrderBooking[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -260,6 +263,8 @@ export const AdminPage: React.FC = () => {
       setParties(allParties);
       const allUsers = await dbService.getAllUsers();
       setUsersList(allUsers);
+      const allMessages = await dbService.getAllContactMessages();
+      setContactMessages(allMessages);
     } catch (e) {
       console.error(e);
     } finally {
@@ -298,6 +303,13 @@ export const AdminPage: React.FC = () => {
   const handleUpdatePartyStatus = async (partyId: string, status: PartyOrderBooking['status']) => {
     await dbService.updatePartyOrderStatus(partyId, status);
     loadData();
+  };
+
+  const handleToggleMessageStatus = async (id: string, currentStatus: ContactMessage['status']) => {
+    const nextStatus: ContactMessage['status'] = currentStatus === 'new' ? 'contacted' : currentStatus === 'contacted' ? 'resolved' : 'new';
+    await dbService.updateContactMessageStatus(id, nextStatus);
+    setContactMessages(prev => prev.map(m => m.id === id ? { ...m, status: nextStatus } : m));
+    showNotification(`Message #${id} marked as ${nextStatus.toUpperCase()}`);
   };
 
   const handleAdminQuickLogin = async (e: React.FormEvent) => {
@@ -869,8 +881,10 @@ export const AdminPage: React.FC = () => {
   const pendingOrders = orders.filter((o) => o.orderStatus === 'pending');
   const pendingParties = parties.filter((p) => p.status === 'pending');
   const activeOrders = orders.filter((o) => o.orderStatus !== 'delivered' && o.orderStatus !== 'cancelled');
+  const newContactMessages = contactMessages.filter((m) => m.status === 'new');
 
   const settingsTabsList = [
+    { id: 'messages' as const, label: 'Contact Inquiries', subLabel: `Sent to contact@mrbun.in (${contactMessages.length})`, icon: MessageSquare, count: contactMessages.length },
     { id: 'payments' as const, label: '6. Cash & Payments', subLabel: 'Cashfree, UPI & Policy', icon: CreditCard },
     { id: 'brand' as const, label: '1. Store Settings & About Us', subLabel: 'Logo, Phone, Email & Legal', icon: ImageIcon },
     { id: 'team' as const, label: '7. Team & Staff', subLabel: `Manage roles (${usersList.length} members)`, icon: Users, count: usersList.length },
@@ -1133,6 +1147,24 @@ export const AdminPage: React.FC = () => {
               {pendingParties.length > 0 && (
                 <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
                   {pendingParties.length}
+                </span>
+              )}
+            </button>
+
+            {/* Contact Inquiries */}
+            <button
+              onClick={() => { setActiveTab('messages'); setIsKebabOpen(false); }}
+              className={`py-2 px-3 sm:px-3.5 rounded-2xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'messages'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Inquiries ({contactMessages.length})</span>
+              {newContactMessages.length > 0 && (
+                <span className="bg-amber-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {newContactMessages.length}
                 </span>
               )}
             </button>
@@ -2896,6 +2928,142 @@ export const AdminPage: React.FC = () => {
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* TAB: CONTACT & INQUIRIES */}
+        {activeTab === 'messages' && (
+          <div className="p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 font-display flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-amber-500" />
+                  <span>Customer Contact Inquiries</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Actionable messages submitted through the Contact Form that land at <strong className="font-mono text-slate-700">contact@mrbun.in</strong>.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">
+                  Total: <strong className="text-slate-800">{contactMessages.length}</strong>
+                </span>
+                {newContactMessages.length > 0 && (
+                  <span className="bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold px-2.5 py-1 rounded-full">
+                    {newContactMessages.length} New Inquiries
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {contactMessages.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <Mail className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-bold text-slate-700">No contact inquiries yet</p>
+                <p className="text-xs text-slate-400 mt-1">Inquiries sent from the Contact Us page will land here and at contact@mrbun.in.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {contactMessages.map((msg) => {
+                  const isNew = msg.status === 'new';
+                  const isContacted = msg.status === 'contacted';
+                  const cleanPhone = msg.phone.replace(/\D/g, '');
+
+                  return (
+                    <div 
+                      key={msg.id}
+                      className={`p-5 rounded-2xl border transition space-y-3.5 ${
+                        isNew 
+                          ? 'bg-amber-50/40 border-amber-300 shadow-xs' 
+                          : 'bg-white border-slate-200 shadow-xs'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-extrabold text-slate-900">{msg.name}</h3>
+                            <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
+                              {msg.id}
+                            </span>
+                          </div>
+                          <span className="inline-block mt-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2.5 py-0.5 rounded-md">
+                            {msg.subject}
+                          </span>
+                        </div>
+
+                        {/* Status Toggle Badge */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleMessageStatus(msg.id, msg.status)}
+                          className={`text-[11px] font-black px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
+                            isNew 
+                              ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
+                              : isContacted
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          }`}
+                          title="Click to cycle status: New -> Contacted -> Resolved"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                          <span>{msg.status ? msg.status.toUpperCase() : 'NEW'}</span>
+                        </button>
+                      </div>
+
+                      {/* Quoted Message */}
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed italic">
+                        "{msg.message}"
+                      </div>
+
+                      {/* Metadata */}
+                      <div className="text-[11px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <span>Delivered To:</span>
+                          <span className="font-mono font-bold text-slate-700">{msg.sentToEmail || 'contact@mrbun.in'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Received At:</span>
+                          <span>{new Date(msg.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <a
+                          href={`tel:${msg.phone}`}
+                          className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 border border-amber-200"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call {msg.phone}</span>
+                        </a>
+
+                        {cleanPhone && (
+                          <a
+                            href={`https://wa.me/91${cleanPhone}?text=Hi%20${encodeURIComponent(msg.name)},%20thank%20you%20for%20contacting%20Mr%20Bun.%20Our%20team%20is%20reaching%20out%20regarding%20your%20inquiry.`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 border border-emerald-200"
+                            title="Chat on WhatsApp"
+                          >
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+
+                        {msg.email && (
+                          <a
+                            href={`mailto:${msg.email}?subject=Re:%20${encodeURIComponent(msg.subject)}%20-%20Mr%20Bun&body=Dear%20${encodeURIComponent(msg.name)},%0A%0AThank%20you%20for%20contacting%20Mr%20Bun.`}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                            title="Send Email"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

@@ -199,3 +199,15 @@ export interface FranchiseModel {
   isActive?: boolean;
 }
 
+export interface ContactMessage {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  subject: string;
+  message: string;
+  sentToEmail: string;
+  status: 'new' | 'contacted' | 'resolved';
+  createdAt: string;
+}
+

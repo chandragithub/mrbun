@@ -8,7 +8,8 @@ import {
   StoreOffer,
   Outlet,
   PartyPackage,
-  FranchiseModel
+  FranchiseModel,
+  ContactMessage
 } from '../types';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { PARTY_PACKAGES } from '../data/partyPackages';
@@ -24,7 +25,22 @@ const FRANCHISE_MODELS_STORAGE_KEY = 'mrbun_franchise_models_v1';
 const USERS_STORAGE_KEY = 'mrbun_users_db_v2';
 const ORDERS_STORAGE_KEY = 'mrbun_orders_db_v2';
 const PARTY_ORDERS_STORAGE_KEY = 'mrbun_party_orders_db_v2';
+const CONTACT_MESSAGES_STORAGE_KEY = 'mrbun_contact_messages_v1';
 const CURRENT_USER_KEY = 'mrbun_active_session_v2';
+
+export const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
+  {
+    id: 'MSG-88412',
+    name: 'Rahul Sharma',
+    phone: '9476088111',
+    email: 'rahul.sharma@example.com',
+    subject: 'Party & Catering Inquiry',
+    message: 'We are planning a birthday party for 40 guests this weekend. Would love to know customized combo options and setup availability.',
+    sentToEmail: 'contact@mrbun.in',
+    status: 'new',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  }
+];
 
 const isLocalEnvironment = 
   (typeof window !== 'undefined' && 
@@ -1270,5 +1286,124 @@ export const dbService = {
       success: false,
       error: res.data?.error || res.error || 'Failed to verify Cashfree payment.'
     };
+  },
+
+  // 10. Contact Inquiries & Direct Email Dispatch to contact@mrbun.in
+  submitContactMessage: async (data: {
+    name: string;
+    phone: string;
+    email?: string;
+    subject: string;
+    message: string;
+    sentToEmail?: string;
+  }): Promise<{
+    success: boolean;
+    id: string;
+    sentToEmail: string;
+    emailDelivered: boolean;
+    message: string;
+  }> => {
+    const settings = dbService.getSettings();
+    const targetEmail = data.sentToEmail || settings.email || 'contact@mrbun.in';
+    const messageId = 'MSG-' + Math.floor(10000 + Math.random() * 90000);
+    const now = new Date().toISOString();
+
+    const newContactMessage: ContactMessage = {
+      id: messageId,
+      name: data.name,
+      phone: data.phone,
+      email: data.email || '',
+      subject: data.subject || 'General Inquiry',
+      message: data.message,
+      sentToEmail: targetEmail,
+      status: 'new',
+      createdAt: now
+    };
+
+    // 1. Cache locally for instant UI update
+    const messages = getStoredData<ContactMessage[]>(CONTACT_MESSAGES_STORAGE_KEY, INITIAL_CONTACT_MESSAGES);
+    messages.unshift(newContactMessage);
+    setStoredData(CONTACT_MESSAGES_STORAGE_KEY, messages);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mrbun-contact-messages-changed', { detail: messages }));
+    }
+
+    // 2. Direct Email Delivery via FormSubmit AJAX service straight into contact@mrbun.in
+    let emailDelivered = false;
+    try {
+      const emailPayload = {
+        name: data.name,
+        phone: data.phone,
+        email: data.email || 'Not provided',
+        subject: data.subject || 'General Inquiry',
+        message: data.message,
+        _subject: `[Mr Bun Contact Form] ${data.subject || 'Inquiry'} from ${data.name} (${data.phone})`,
+        _template: 'table',
+        _captcha: 'false'
+      };
+
+      const emailRes = await fetch(`https://formsubmit.co/ajax/${targetEmail}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (emailRes.ok) {
+        emailDelivered = true;
+      }
+    } catch (err) {
+      console.warn('Direct FormSubmit email forwarding notice:', err);
+    }
+
+    // 3. Persist to Cloudflare D1 Backend SQLite
+    try {
+      await apiCall('/api/contact', {
+        method: 'POST',
+        body: JSON.stringify(newContactMessage)
+      });
+    } catch (err) {
+      console.warn('Cloudflare D1 contact sync notice:', err);
+    }
+
+    return {
+      success: true,
+      id: messageId,
+      sentToEmail: targetEmail,
+      emailDelivered,
+      message: 'Our team will contact you soon.'
+    };
+  },
+
+  getAllContactMessages: async (): Promise<ContactMessage[]> => {
+    try {
+      const res = await apiCall<{ success: boolean; messages: ContactMessage[] }>('/api/contact');
+      if (res.success && res.data?.messages && Array.isArray(res.data.messages)) {
+        setStoredData(CONTACT_MESSAGES_STORAGE_KEY, res.data.messages);
+        return res.data.messages;
+      }
+    } catch {}
+    return getStoredData<ContactMessage[]>(CONTACT_MESSAGES_STORAGE_KEY, INITIAL_CONTACT_MESSAGES);
+  },
+
+  updateContactMessageStatus: async (id: string, status: ContactMessage['status']): Promise<boolean> => {
+    const messages = getStoredData<ContactMessage[]>(CONTACT_MESSAGES_STORAGE_KEY, INITIAL_CONTACT_MESSAGES);
+    const item = messages.find(m => m.id === id);
+    if (item) {
+      item.status = status;
+      setStoredData(CONTACT_MESSAGES_STORAGE_KEY, messages);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mrbun-contact-messages-changed', { detail: messages }));
+      }
+    }
+    try {
+      await apiCall(`/api/contact/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+      });
+    } catch {}
+    return true;
   }
 };

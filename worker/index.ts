@@ -449,6 +449,17 @@ async function ensureTables(db: any) {
         verified INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS contact_messages (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        subject TEXT NOT NULL,
+        message TEXT NOT NULL,
+        sent_to_email TEXT DEFAULT 'contact@mrbun.in',
+        status TEXT DEFAULT 'new',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
     // Safe column migrations for existing store_settings table
@@ -1599,6 +1610,89 @@ export default {
         }, 201);
       } catch (err: any) {
         return jsonResponse({ success: false, error: err.message }, 400);
+      }
+    }
+
+    // 7b. CONTACT & DIRECT INQUIRIES API
+    if (url.pathname === '/api/contact' || url.pathname.startsWith('/api/contact/')) {
+      await ensureTables(env.DB);
+
+      // GET All Inquiries
+      if (request.method === 'GET') {
+        try {
+          if (env.DB) {
+            const { results } = await env.DB.prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 100').all();
+            const formatted = (results || []).map((r: any) => ({
+              id: r.id,
+              name: r.name,
+              phone: r.phone,
+              email: r.email,
+              subject: r.subject,
+              message: r.message,
+              sentToEmail: r.sent_to_email || 'contact@mrbun.in',
+              status: r.status || 'new',
+              createdAt: r.created_at
+            }));
+            return jsonResponse({ success: true, messages: formatted });
+          }
+          return jsonResponse({ success: true, messages: [] });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message, messages: [] }, 200);
+        }
+      }
+
+      // POST Submit New Inquiry
+      if (request.method === 'POST') {
+        try {
+          const body: any = await request.json();
+          const contactId = 'MSG-' + Math.floor(10000 + Math.random() * 90000);
+          const targetEmail = body.sentToEmail || 'contact@mrbun.in';
+
+          if (!body.name || !body.phone || !body.message) {
+            return jsonResponse({ success: false, error: 'Name, contact phone, and message are required.' }, 400);
+          }
+
+          if (env.DB) {
+            await env.DB.prepare(`
+              INSERT INTO contact_messages (
+                id, name, phone, email, subject, message, sent_to_email, status
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+              contactId,
+              body.name,
+              body.phone,
+              body.email || null,
+              body.subject || 'General Inquiry',
+              body.message,
+              targetEmail,
+              'new'
+            ).run();
+          }
+
+          return jsonResponse({
+            success: true,
+            id: contactId,
+            sentToEmail: targetEmail,
+            message: 'Message delivered to contact@mrbun.in. Our team will contact you soon.'
+          }, 201);
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 400);
+        }
+      }
+
+      // PUT Update Status
+      if (request.method === 'PUT') {
+        try {
+          const msgId = url.pathname.split('/').pop();
+          const body: any = await request.json();
+          if (env.DB && msgId) {
+            await env.DB.prepare('UPDATE contact_messages SET status = ? WHERE id = ?')
+              .bind(body.status || 'contacted', msgId).run();
+          }
+          return jsonResponse({ success: true, message: 'Status updated' });
+        } catch (err: any) {
+          return jsonResponse({ success: false, error: err.message }, 400);
+        }
       }
     }
 

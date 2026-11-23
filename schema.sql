@@ -214,3 +214,16 @@ CREATE TABLE IF NOT EXISTS otp_verifications (
     verified INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 11. Customer Contact & Direct Feedback Messages Table
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    sent_to_email TEXT DEFAULT 'contact@mrbun.in',
+    status TEXT DEFAULT 'new',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
