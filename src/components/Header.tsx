@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Phone, 
@@ -30,9 +30,37 @@ export const Header: React.FC = () => {
   const { settings } = useSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Close user dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!userDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [userDropdownOpen]);
 
   // Close mobile drawer and dropdown on route change
   useEffect(() => {
@@ -164,7 +192,7 @@ export const Header: React.FC = () => {
               
               {/* User Account / Profile */}
               {isAuthenticated ? (
-                <div className="relative">
+                <div className="relative" ref={userDropdownRef}>
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                     className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-950 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition"

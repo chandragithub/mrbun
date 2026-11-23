@@ -18,8 +18,8 @@ const DEFAULT_SETTINGS = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
-  msg91WidgetId: '3667706d6550343738383031',
-  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
+  msg91WidgetId: '',
+  msg91TokenAuth: '',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',

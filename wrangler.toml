@@ -24,3 +24,10 @@ CONTACT_PHONE = "9476088111"
 CONTACT_EMAIL = "contact@mrbun.in"
 FSSAI_LICENSE = "22926112000173"
 WORKERS_DEV_DOMAIN = "mrbun.ceansystech.workers.dev"
+
+# Set sensitive production secrets via Wrangler CLI (Never commit secrets to Git):
+# npx wrangler secret put AUTH_SECRET
+# npx wrangler secret put MSG91_AUTH_KEY
+# npx wrangler secret put MSG91_TOKEN_AUTH
+# npx wrangler secret put CASHFREE_SECRET_KEY
+# npx wrangler secret put ADMIN_DEFAULT_PASSWORD

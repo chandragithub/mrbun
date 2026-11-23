@@ -51,7 +51,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+    const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '';
     const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
     const isTestMode = paymentOptions.isTestMode === true;
 

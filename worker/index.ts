@@ -11,8 +11,13 @@ export interface Env {
   FSSAI_LICENSE?: string;
   MSG91_AUTH_KEY?: string;
   MSG91_TEMPLATE_ID?: string;
+  MSG91_WIDGET_ID?: string;
+  MSG91_TOKEN_AUTH?: string;
   CASHFREE_APP_ID?: string;
   CASHFREE_SECRET_KEY?: string;
+  AUTH_SECRET?: string;
+  JWT_SECRET?: string;
+  ADMIN_DEFAULT_PASSWORD?: string;
 }
 
 const CORS_HEADERS = {
@@ -31,7 +36,205 @@ function jsonResponse(data: any, status = 200) {
   });
 }
 
-// Default Seed Constants for D1 initialization
+// ==========================================
+// CRYPTOGRAPHY & AUTHENTICATION UTILITIES
+// ==========================================
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const matches = hex.match(/.{1,2}/g);
+  return new Uint8Array(matches ? matches.map(byte => parseInt(byte, 16)) : []);
+}
+
+function base64UrlEncodeBytes(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlEncodeString(str: string): string {
+  return base64UrlEncodeBytes(new TextEncoder().encode(str));
+}
+
+function base64UrlDecodeToBytes(b64url: string): Uint8Array {
+  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) {
+    b64 += '=';
+  }
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function base64UrlDecodeToString(b64url: string): string {
+  return new TextDecoder().decode(base64UrlDecodeToBytes(b64url));
+}
+
+// Cryptographic PBKDF2 Password Hashing (100,000 iterations SHA-256)
+async function hashPassword(password: string, saltHex?: string): Promise<string> {
+  const enc = new TextEncoder();
+  const salt = saltHex ? hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const keyBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt as any,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    256
+  );
+  const hashHex = bytesToHex(new Uint8Array(keyBits));
+  const saltStr = bytesToHex(salt);
+  return `pbkdf2_sha256$100000$${saltStr}$${hashHex}`;
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (!storedHash) return false;
+  // Backward compatibility with legacy plaintext passwords
+  if (!storedHash.startsWith('pbkdf2_sha256$')) {
+    return storedHash === password;
+  }
+  const parts = storedHash.split('$');
+  if (parts.length !== 4) return false;
+  const saltStr = parts[2];
+  const expectedHash = parts[3];
+  const computed = await hashPassword(password, saltStr);
+  const computedHash = computed.split('$')[3];
+  return computedHash === expectedHash;
+}
+
+// Signed JWT-compatible Token Generation (HMAC-SHA256)
+async function generateToken(payload: any, secret: string, expiresInSeconds = 7 * 24 * 3600): Promise<string> {
+  const enc = new TextEncoder();
+  const now = Math.floor(Date.now() / 1000);
+  const tokenPayload = {
+    ...payload,
+    iat: now,
+    exp: now + expiresInSeconds
+  };
+
+  const headerB64 = base64UrlEncodeString(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payloadB64 = base64UrlEncodeString(JSON.stringify(tokenPayload));
+  const dataToSign = `${headerB64}.${payloadB64}`;
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(dataToSign));
+  const sigB64 = base64UrlEncodeBytes(new Uint8Array(sigBuffer));
+
+  return `${dataToSign}.${sigB64}`;
+}
+
+async function verifyToken(token: string, secret: string): Promise<{ valid: boolean; payload?: any; error?: string }> {
+  try {
+    if (!token || typeof token !== 'string') return { valid: false, error: 'Token missing' };
+    const parts = token.split('.');
+    if (parts.length !== 3) return { valid: false, error: 'Malformed token structure' };
+
+    const [headerB64, payloadB64, sigB64] = parts;
+    const dataToVerify = `${headerB64}.${payloadB64}`;
+
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+
+    const sigBytes = base64UrlDecodeToBytes(sigB64);
+    const isValid = await crypto.subtle.verify('HMAC', key, sigBytes as any, enc.encode(dataToVerify));
+    if (!isValid) {
+      return { valid: false, error: 'Invalid token signature' };
+    }
+
+    const payload = JSON.parse(base64UrlDecodeToString(payloadB64));
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      return { valid: false, error: 'Token has expired' };
+    }
+
+    return { valid: true, payload };
+  } catch (err: any) {
+    return { valid: false, error: err.message || 'Token verification failed' };
+  }
+}
+
+function getJwtSecret(env: Env): string {
+  return env.AUTH_SECRET || env.JWT_SECRET || 'mrbun-secure-edge-signing-secret-2026';
+}
+
+async function getAuthUser(request: Request, env: Env): Promise<{ id: string; email: string; phone?: string; role: string; name?: string } | null> {
+  const authHeader = request.headers.get('Authorization') || '';
+  if (!authHeader.toLowerCase().startsWith('bearer ')) {
+    return null;
+  }
+  const token = authHeader.substring(7).trim();
+  if (!token) return null;
+
+  const result = await verifyToken(token, getJwtSecret(env));
+  if (!result.valid || !result.payload) {
+    return null;
+  }
+
+  return {
+    id: result.payload.sub,
+    email: result.payload.email,
+    phone: result.payload.phone,
+    role: result.payload.role,
+    name: result.payload.name
+  };
+}
+
+async function requireAuth(
+  request: Request,
+  env: Env,
+  allowedRoles?: string[]
+): Promise<{ user: any; response: null } | { user: null; response: Response }> {
+  const user = await getAuthUser(request, env);
+  if (!user) {
+    return {
+      user: null,
+      response: jsonResponse({ success: false, error: 'Unauthorized: Valid authentication token required.' }, 401)
+    };
+  }
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    const role = (user.role || 'customer').toLowerCase();
+    const hasRole = allowedRoles.includes(role) || role === 'admin' || role === 'owner';
+    if (!hasRole) {
+      return {
+        user: null,
+        response: jsonResponse({ success: false, error: 'Forbidden: Insufficient permissions for this action.' }, 403)
+      };
+    }
+  }
+
+  return { user, response: null };
+}
+
+// Default Seed Constants for D1 initialization (Sensitive tokens removed from code)
 const DEFAULT_SETTINGS = {
   brandName: 'Mr Bun',
   tagline: 'Pizzas • Burgers • Mocktails',
@@ -45,8 +248,8 @@ const DEFAULT_SETTINGS = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
-  msg91WidgetId: '3667706d6550343738383031',
-  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
+  msg91WidgetId: '',
+  msg91TokenAuth: '',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -475,12 +678,21 @@ async function ensureTables(db: any) {
     try { await db.exec('ALTER TABLE users ADD COLUMN assigned_outlet TEXT;'); } catch {}
     try { await db.exec('ALTER TABLE users ADD COLUMN status TEXT DEFAULT "active";'); } catch {}
 
-    // Seed master administrator account if it does not exist
+    // Seed master administrator account if it does not exist (with PBKDF2 hashed password)
     try {
-      await db.prepare(`
-        INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, address, assigned_outlet, status)
-        VALUES ('usr-admin', 'Mr Bun Master Admin', 'admin@mrbun.in', '9476088111', 'admin123', 'admin', 'Central Kitchen & HQ', 'All Outlets', 'active')
-      `).run();
+      const existingAdmin: any = await db.prepare('SELECT id, password_hash FROM users WHERE id = "usr-admin" LIMIT 1').first();
+      if (!existingAdmin) {
+        const defaultAdminPassword = 'admin123';
+        const hashedPassword = await hashPassword(defaultAdminPassword);
+        await db.prepare(`
+          INSERT INTO users (id, name, email, phone, password_hash, role, address, assigned_outlet, status)
+          VALUES ('usr-admin', 'Mr Bun Master Admin', 'admin@mrbun.in', '9476088111', ?, 'admin', 'Central Kitchen & HQ', 'All Outlets', 'active')
+        `).bind(hashedPassword).run();
+      } else if (existingAdmin.password_hash === 'admin123' || !existingAdmin.password_hash.startsWith('pbkdf2_sha256$')) {
+        // Transparent migration: Rehash legacy plaintext password to PBKDF2-SHA256
+        const upgradedHash = await hashPassword(existingAdmin.password_hash);
+        await db.prepare('UPDATE users SET password_hash = ? WHERE id = "usr-admin"').bind(upgradedHash).run();
+      }
     } catch {}
   } catch (e) {
     console.error('Error ensuring tables:', e);
@@ -517,9 +729,19 @@ export default {
 
       if (request.method === 'GET') {
         try {
+          const authUser = await getAuthUser(request, env);
+          const isAdmin = authUser && (authUser.role === 'admin' || authUser.role === 'owner');
+
           if (env.DB) {
             const row: any = await env.DB.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first();
             if (row) {
+              const fullPaymentOptions = JSON.parse(row.payment_options_json || '{}');
+              // Security: Mask/redact sensitive secret keys unless requested by an authenticated admin
+              const safePaymentOptions = {
+                ...fullPaymentOptions,
+                cashfreeSecretKey: isAdmin ? (fullPaymentOptions.cashfreeSecretKey || env.CASHFREE_SECRET_KEY || '') : ''
+              };
+
               return jsonResponse({
                 success: true,
                 settings: {
@@ -533,11 +755,11 @@ export default {
                   aboutHeroTitle: row.about_hero_title || DEFAULT_SETTINGS.aboutHeroTitle,
                   aboutHeroDescription: row.about_hero_description || DEFAULT_SETTINGS.aboutHeroDescription,
                   fssaiLicense: row.fssai_license || DEFAULT_SETTINGS.fssaiLicense,
-                  msg91AuthKey: row.msg91_auth_key || env.MSG91_AUTH_KEY || '',
+                  msg91AuthKey: isAdmin ? (row.msg91_auth_key || env.MSG91_AUTH_KEY || '') : '',
                   msg91TemplateId: row.msg91_template_id || env.MSG91_TEMPLATE_ID || '',
-                  msg91WidgetId: row.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '',
-                  msg91TokenAuth: row.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '',
-                  paymentOptions: JSON.parse(row.payment_options_json || '{}')
+                  msg91WidgetId: row.msg91_widget_id || env.MSG91_WIDGET_ID || DEFAULT_SETTINGS.msg91WidgetId || '',
+                  msg91TokenAuth: isAdmin ? (row.msg91_token_auth || env.MSG91_TOKEN_AUTH || DEFAULT_SETTINGS.msg91TokenAuth || '') : '',
+                  paymentOptions: safePaymentOptions
                 }
               });
             }
@@ -549,6 +771,9 @@ export default {
       }
 
       if (request.method === 'POST' || request.method === 'PUT') {
+        const auth = await requireAuth(request, env, ['admin']);
+        if (auth.response) return auth.response;
+
         try {
           const body: any = await request.json();
           const current: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
@@ -690,6 +915,9 @@ export default {
       }
 
       if (request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const p: any = await request.json();
           const prodId = p.id || `prod-${Date.now()}`;
@@ -743,6 +971,9 @@ export default {
       }
 
       if (request.method === 'DELETE') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/products/', '').trim();
           if (id && env.DB) {
@@ -785,6 +1016,9 @@ export default {
       }
 
       if (request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const o: any = await request.json();
           const offerId = o.id || `off-${Date.now()}`;
@@ -825,6 +1059,9 @@ export default {
       }
 
       if (request.method === 'DELETE') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/offers/', '').trim();
           if (id && env.DB) {
@@ -870,6 +1107,9 @@ export default {
       }
 
       if (request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const o: any = await request.json();
           const outletId = o.id || `outlet-${Date.now()}`;
@@ -916,6 +1156,9 @@ export default {
       }
 
       if (request.method === 'DELETE') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/outlets/', '').trim();
           if (id && env.DB) {
@@ -932,16 +1175,32 @@ export default {
     if (url.pathname === '/api/orders' || url.pathname.startsWith('/api/orders/')) {
       await ensureTables(env.DB);
 
-      // GET All or By Email
+      // GET All or By Email/Phone/ID
       if (request.method === 'GET') {
         try {
+          const email = url.searchParams.get('email');
+          const phone = url.searchParams.get('phone');
+          const orderId = url.searchParams.get('id');
+
+          // If fetching all orders across the business, require staff or admin authorization
+          if (!email && !phone && !orderId) {
+            const auth = await requireAuth(request, env, ['admin', 'manager', 'waiter', 'delivery_partner']);
+            if (auth.response) return auth.response;
+          }
+
           if (env.DB) {
-            const email = url.searchParams.get('email');
             let query = 'SELECT * FROM orders ORDER BY created_at DESC LIMIT 100';
             let stmt = env.DB.prepare(query);
-            if (email) {
+            if (orderId) {
+              query = 'SELECT * FROM orders WHERE id = ? LIMIT 1';
+              stmt = env.DB.prepare(query).bind(orderId);
+            } else if (email) {
               query = 'SELECT * FROM orders WHERE customer_email = ? ORDER BY created_at DESC LIMIT 50';
               stmt = env.DB.prepare(query).bind(email);
+            } else if (phone) {
+              const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+              query = 'SELECT * FROM orders WHERE customer_phone = ? OR customer_phone = ? ORDER BY created_at DESC LIMIT 50';
+              stmt = env.DB.prepare(query).bind(phone, cleanPhone);
             }
             const { results } = await stmt.all();
             
@@ -1048,7 +1307,7 @@ export default {
             paymentOptions = JSON.parse(currentSettings.payment_options_json || '{}');
           } catch {}
 
-          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '';
           const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
           const isTestMode = paymentOptions.isTestMode === true;
 
@@ -1135,7 +1394,7 @@ export default {
             paymentOptions = JSON.parse(currentSettings.payment_options_json || '{}');
           } catch {}
 
-          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '135031343aa764f0a6ea5362ff73130531';
+          const appId = env.CASHFREE_APP_ID || paymentOptions.cashfreeAppId || '';
           const secretKey = env.CASHFREE_SECRET_KEY || paymentOptions.cashfreeSecretKey || '';
           const isTestMode = paymentOptions.isTestMode === true;
 
@@ -1174,6 +1433,9 @@ export default {
 
       // POST Approve Order: moves from pending -> confirmed, dispatches customer SMS/Email
       if (url.pathname.endsWith('/approve') && request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager', 'waiter', 'delivery_partner']);
+        if (auth.response) return auth.response;
+
         try {
           const parts = url.pathname.split('/');
           const orderId = parts[parts.length - 2];
@@ -1221,6 +1483,9 @@ export default {
 
       // PATCH Order Status: update kitchen stage (preparing, out_for_delivery, delivered)
       if (url.pathname.endsWith('/status') && (request.method === 'PATCH' || request.method === 'POST')) {
+        const auth = await requireAuth(request, env, ['admin', 'manager', 'waiter', 'delivery_partner']);
+        if (auth.response) return auth.response;
+
         try {
           const parts = url.pathname.split('/');
           const orderId = parts[parts.length - 2];
@@ -1243,8 +1508,26 @@ export default {
 
       if (request.method === 'GET') {
         try {
+          const email = url.searchParams.get('email');
+          const phone = url.searchParams.get('phone');
+
+          // If fetching all party bookings, require staff/admin
+          if (!email && !phone) {
+            const auth = await requireAuth(request, env, ['admin', 'manager']);
+            if (auth.response) return auth.response;
+          }
+
           if (env.DB) {
-            const { results } = await env.DB.prepare('SELECT * FROM party_orders ORDER BY created_at DESC LIMIT 50').all();
+            let stmt;
+            if (email) {
+              stmt = env.DB.prepare('SELECT * FROM party_orders WHERE email = ? ORDER BY created_at DESC LIMIT 50').bind(email);
+            } else if (phone) {
+              const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+              stmt = env.DB.prepare('SELECT * FROM party_orders WHERE phone = ? OR phone = ? ORDER BY created_at DESC LIMIT 50').bind(phone, cleanPhone);
+            } else {
+              stmt = env.DB.prepare('SELECT * FROM party_orders ORDER BY created_at DESC LIMIT 50');
+            }
+            const { results } = await stmt.all();
             const mapped = (results || []).map((r: any) => ({
               id: r.id,
               userId: r.user_id,
@@ -1335,6 +1618,9 @@ export default {
 
       // Approve Party Booking
       if (url.pathname.endsWith('/approve') && request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const parts = url.pathname.split('/');
           const partyId = parts[parts.length - 2];
@@ -1382,6 +1668,9 @@ export default {
 
       // Update Party Status
       if (url.pathname.endsWith('/status') && (request.method === 'PATCH' || request.method === 'POST')) {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const parts = url.pathname.split('/');
           const partyId = parts[parts.length - 2];
@@ -1431,6 +1720,9 @@ export default {
       }
 
       if (request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const p: any = await request.json();
           const pkgId = p.id || `pkg-${Date.now()}`;
@@ -1476,6 +1768,9 @@ export default {
       }
 
       if (request.method === 'DELETE') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/packages/', '').trim();
           if (id && env.DB) {
@@ -1519,6 +1814,9 @@ export default {
       }
 
       if (request.method === 'POST') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const m: any = await request.json();
           const modelId = m.id || `fran-model-${Date.now()}`;
@@ -1562,6 +1860,9 @@ export default {
       }
 
       if (request.method === 'DELETE') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/franchise-models/', '').replace('/api/franchise-models', '').trim() || url.searchParams.get('id');
           if (id && env.DB) {
@@ -1617,8 +1918,11 @@ export default {
     if (url.pathname === '/api/contact' || url.pathname.startsWith('/api/contact/')) {
       await ensureTables(env.DB);
 
-      // GET All Inquiries
+      // GET All Inquiries (Admin / Manager only)
       if (request.method === 'GET') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           if (env.DB) {
             const { results } = await env.DB.prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 100').all();
@@ -1680,8 +1984,11 @@ export default {
         }
       }
 
-      // PUT Update Status
+      // PUT Update Status (Admin / Manager only)
       if (request.method === 'PUT') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           const msgId = url.pathname.split('/').pop();
           const body: any = await request.json();
@@ -1713,8 +2020,8 @@ export default {
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
         const templateId = env.MSG91_TEMPLATE_ID || currentSettings.msg91_template_id || '';
-        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
-        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
+        const widgetId = env.MSG91_WIDGET_ID || currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '';
+        const tokenAuth = env.MSG91_TOKEN_AUTH || currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '';
 
         // Generate 4-digit OTP code
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -1829,8 +2136,8 @@ export default {
 
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
-        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
-        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
+        const widgetId = env.MSG91_WIDGET_ID || currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '';
+        const tokenAuth = env.MSG91_TOKEN_AUTH || currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '';
 
         let verified = false;
 
@@ -1920,43 +2227,82 @@ export default {
         const normalized = rawIdentifier.toLowerCase();
         const cleanPhone = rawIdentifier.replace(/\D/g, '').slice(-10);
 
+        if (!password) {
+          return jsonResponse({ success: false, error: 'Password is required to log in.' }, 400);
+        }
+
         if (env.DB) {
           const user: any = await env.DB.prepare(`
             SELECT * FROM users 
-            WHERE LOWER(email) = ? OR phone = ? OR phone = ?
+            WHERE LOWER(email) = ? OR (phone != '' AND phone = ?) OR (phone != '' AND phone = ?)
             LIMIT 1
           `).bind(normalized, rawIdentifier, cleanPhone).first();
 
-          if (user && user.password_hash === password) {
-            return jsonResponse({
-              success: true,
-              user: {
+          if (user) {
+            const passwordMatches = await verifyPassword(password, user.password_hash);
+            if (passwordMatches) {
+              // Transparent migration: Rehash legacy unhashed password to PBKDF2-SHA256
+              if (!user.password_hash.startsWith('pbkdf2_sha256$')) {
+                const newHash = await hashPassword(password);
+                try {
+                  await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(newHash, user.id).run();
+                } catch {}
+              }
+
+              const userObj = {
                 id: user.id,
                 name: user.name,
                 email: user.email,
                 phone: user.phone || '9476088111',
                 address: user.address || '',
                 avatarUrl: user.avatar_url || '',
-                role: user.role
-              }
-            });
+                role: user.role || 'customer',
+                assignedOutlet: user.assigned_outlet || 'All Outlets',
+                status: user.status || 'active'
+              };
+
+              const token = await generateToken({
+                sub: user.id,
+                email: user.email,
+                phone: user.phone,
+                role: userObj.role,
+                name: user.name
+              }, getJwtSecret(env));
+
+              return jsonResponse({
+                success: true,
+                user: userObj,
+                token
+              });
+            }
           }
         }
 
         // Master Admin fallback authentication
-        if ((normalized === 'admin@mrbun.in' || cleanPhone === '9476088111') && password === 'admin123') {
+        const defaultAdminPassword = env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+        if ((normalized === 'admin@mrbun.in' || cleanPhone === '9476088111') && password === defaultAdminPassword) {
+          const adminUser = {
+            id: 'usr-admin',
+            name: 'Mr Bun Master Admin',
+            email: 'admin@mrbun.in',
+            phone: '9476088111',
+            avatarUrl: '/logo.png',
+            role: 'admin',
+            assignedOutlet: 'All Outlets',
+            status: 'active'
+          };
+          const token = await generateToken({
+            sub: adminUser.id,
+            email: adminUser.email,
+            phone: adminUser.phone,
+            role: adminUser.role,
+            name: adminUser.name
+          }, getJwtSecret(env));
+
           return jsonResponse({
             success: true,
-            user: {
-              id: 'usr-admin',
-              name: 'Mr Bun Master Admin',
-              email: 'admin@mrbun.in',
-              phone: '9476088111',
-              avatarUrl: '/logo.png',
-              role: 'admin',
-              assignedOutlet: 'All Outlets',
-              status: 'active'
-            }
+            user: adminUser,
+            token
           });
         }
 
@@ -2010,6 +2356,8 @@ export default {
           }
         }
 
+        const hashedPassword = await hashPassword(password);
+
         // Check if user already exists with this phone
         if (env.DB) {
           const existing: any = await env.DB.prepare(`
@@ -2020,18 +2368,29 @@ export default {
             // Update password & details and log in
             await env.DB.prepare(`
               UPDATE users SET name = ?, password_hash = ?, address = ? WHERE id = ?
-            `).bind(name, password, address || existing.address || '', existing.id).run();
+            `).bind(name, hashedPassword, address || existing.address || '', existing.id).run();
+
+            const userObj = {
+              id: existing.id,
+              name,
+              email: existing.email,
+              phone: cleanPhone,
+              address: address || existing.address || '',
+              role: existing.role || 'customer'
+            };
+
+            const token = await generateToken({
+              sub: userObj.id,
+              email: userObj.email,
+              phone: userObj.phone,
+              role: userObj.role,
+              name: userObj.name
+            }, getJwtSecret(env));
 
             return jsonResponse({
               success: true,
-              user: {
-                id: existing.id,
-                name,
-                email: existing.email,
-                phone: cleanPhone,
-                address: address || existing.address || '',
-                role: existing.role || 'customer'
-              },
+              user: userObj,
+              token,
               message: 'Account updated & authenticated successfully.'
             });
           }
@@ -2043,20 +2402,31 @@ export default {
           await env.DB.prepare(`
             INSERT INTO users (id, name, email, phone, password_hash, address, role)
             VALUES (?, ?, ?, ?, ?, ?, 'customer')
-          `).bind(userId, name, email, cleanPhone, password, address).run();
+          `).bind(userId, name, email, cleanPhone, hashedPassword, address).run();
         }
+
+        const userObj = {
+          id: userId,
+          name,
+          email,
+          phone: cleanPhone,
+          address,
+          role: 'customer'
+        };
+
+        const token = await generateToken({
+          sub: userObj.id,
+          email: userObj.email,
+          phone: userObj.phone,
+          role: userObj.role,
+          name: userObj.name
+        }, getJwtSecret(env));
 
         return jsonResponse({
           success: true,
-          user: {
-            id: userId,
-            name,
-            email,
-            phone: cleanPhone,
-            address,
-            role: 'customer'
-          },
-          message: 'Account registered and phone number verified via MSG91!'
+          user: userObj,
+          token,
+          message: 'Account registered and phone number verified successfully!'
         }, 201);
       } catch (err: any) {
         return jsonResponse({ success: false, error: err.message }, 400);
@@ -2080,8 +2450,8 @@ export default {
 
         const currentSettings: any = (await env.DB?.prepare('SELECT * FROM store_settings WHERE id = "default" LIMIT 1').first()) || {};
         const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
-        const widgetId = currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '3667706d6550343738383031';
-        const tokenAuth = currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '551095TZsDtgzbxo16b016ebaP1';
+        const widgetId = env.MSG91_WIDGET_ID || currentSettings.msg91_widget_id || DEFAULT_SETTINGS.msg91WidgetId || '';
+        const tokenAuth = env.MSG91_TOKEN_AUTH || currentSettings.msg91_token_auth || DEFAULT_SETTINGS.msg91TokenAuth || '';
 
         // 1. Direct MSG91 v5 verify if authKey is configured
         if (authKey) {
@@ -2173,17 +2543,28 @@ export default {
           };
         }
 
+        const userObj = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || cleanPhone,
+          address: user.address || '',
+          avatarUrl: user.avatar_url || '',
+          role: user.role || 'customer'
+        };
+
+        const token = await generateToken({
+          sub: user.id,
+          email: user.email,
+          phone: userObj.phone,
+          role: userObj.role,
+          name: user.name
+        }, getJwtSecret(env));
+
         return jsonResponse({
           success: true,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone || cleanPhone,
-            address: user.address || '',
-            avatarUrl: user.avatar_url || '',
-            role: user.role || 'customer'
-          }
+          user: userObj,
+          token
         });
       } catch (err: any) {
         return jsonResponse({ success: false, error: err.message }, 500);
@@ -2230,9 +2611,17 @@ export default {
 
       // POST or PUT Update Profile
       if (request.method === 'POST' || request.method === 'PUT') {
+        const auth = await requireAuth(request, env);
+        if (auth.response) return auth.response;
+
         try {
           const body: any = await request.json();
           const userId = (body.id || body.userId || '').trim();
+
+          // Ensure non-admins can only update their own profile
+          if (auth.user.role !== 'admin' && auth.user.role !== 'owner' && auth.user.id !== userId) {
+            return jsonResponse({ success: false, error: 'Forbidden: You can only update your own profile.' }, 403);
+          }
           const name = (body.name || '').trim();
           const email = (body.email || '').trim().toLowerCase();
           const rawPhone = (body.phone || '').trim();
@@ -2339,8 +2728,11 @@ export default {
     if (url.pathname === '/api/users' || url.pathname.startsWith('/api/users/')) {
       await ensureTables(env.DB);
 
-      // GET /api/users - Fetch all users and staff
+      // GET /api/users - Fetch all users and staff (Admin / Manager only)
       if (request.method === 'GET' && url.pathname === '/api/users') {
+        const auth = await requireAuth(request, env, ['admin', 'manager']);
+        if (auth.response) return auth.response;
+
         try {
           if (env.DB) {
             const { results } = await env.DB.prepare(`
@@ -2370,15 +2762,18 @@ export default {
         }
       }
 
-      // POST /api/users - Create new user or staff member with assigned role
+      // POST /api/users - Create new user or staff member with assigned role (Admin only)
       if (request.method === 'POST' && url.pathname === '/api/users') {
+        const auth = await requireAuth(request, env, ['admin']);
+        if (auth.response) return auth.response;
+
         try {
           const body: any = await request.json();
           const name = (body.name || '').trim();
           const email = (body.email || '').trim().toLowerCase();
           const rawPhone = (body.phone || '').trim();
           const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
-          const password = (body.password || 'mrbun123').trim();
+          const rawPassword = (body.password || 'mrbun123').trim();
           const role = (body.role || 'customer').trim();
           const assignedOutlet = (body.assignedOutlet || 'All Outlets').trim();
           const address = (body.address || '').trim();
@@ -2389,6 +2784,7 @@ export default {
             return jsonResponse({ success: false, error: 'Full name and email are required.' }, 400);
           }
 
+          const hashedPassword = await hashPassword(rawPassword);
           const userId = 'usr-' + Math.random().toString(36).substring(2, 9);
           if (env.DB) {
             // Check if email or phone already exists
@@ -2401,7 +2797,7 @@ export default {
             await env.DB.prepare(`
               INSERT INTO users (id, name, email, phone, password_hash, address, avatar_url, role, assigned_outlet, status)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).bind(userId, name, email, cleanPhone, password, address, avatarUrl, role, assignedOutlet, status).run();
+            `).bind(userId, name, email, cleanPhone, hashedPassword, address, avatarUrl, role, assignedOutlet, status).run();
           }
 
           const created = {
@@ -2423,8 +2819,11 @@ export default {
         }
       }
 
-      // PUT /api/users/:id - Update user details, role or password
+      // PUT /api/users/:id - Update user details, role or password (Admin only)
       if (request.method === 'PUT' && url.pathname.startsWith('/api/users/')) {
+        const auth = await requireAuth(request, env, ['admin']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/users/', '').trim();
           const body: any = await request.json();
@@ -2446,7 +2845,7 @@ export default {
             const updatedOutlet = body.assignedOutlet !== undefined ? body.assignedOutlet : existing.assigned_outlet;
             const updatedStatus = body.status !== undefined ? body.status : existing.status;
             const updatedAddress = body.address !== undefined ? body.address : existing.address;
-            const updatedPassword = body.password ? body.password.trim() : existing.password_hash;
+            const updatedPassword = body.password ? await hashPassword(body.password.trim()) : existing.password_hash;
 
             await env.DB.prepare(`
               UPDATE users 
@@ -2486,8 +2885,11 @@ export default {
         }
       }
 
-      // DELETE /api/users/:id - Delete staff member
+      // DELETE /api/users/:id - Delete staff member (Admin only)
       if (request.method === 'DELETE' && url.pathname.startsWith('/api/users/')) {
+        const auth = await requireAuth(request, env, ['admin']);
+        if (auth.response) return auth.response;
+
         try {
           const id = url.pathname.replace('/api/users/', '').trim();
           if (id === 'usr-admin') {

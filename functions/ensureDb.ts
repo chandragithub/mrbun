@@ -264,11 +264,17 @@ export async function ensureTables(db: any) {
     } catch {}
   }
 
-  // Seed master administrator account if it does not exist
+  // Seed master administrator account if it does not exist (with PBKDF2 hashed password)
   try {
-    await db.prepare(`
-      INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, address, assigned_outlet, status)
-      VALUES ('usr-admin', 'Mr Bun Master Admin', 'admin@mrbun.in', '9476088111', 'admin123', 'admin', 'Central Kitchen & HQ', 'All Outlets', 'active')
-    `).run();
+    const existing = await db.prepare('SELECT id, password_hash FROM users WHERE id = "usr-admin" LIMIT 1').first();
+    const adminHash = 'pbkdf2_sha256$100000$7903f652f6291f6482dba30db75340c0$3f1b6654d3f222a73db568aa269081a78f7cbb614552df468645173a23b0bbba';
+    if (!existing) {
+      await db.prepare(`
+        INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, address, assigned_outlet, status)
+        VALUES ('usr-admin', 'Mr Bun Master Admin', 'admin@mrbun.in', '9476088111', ?, 'admin', 'Central Kitchen & HQ', 'All Outlets', 'active')
+      `).bind(adminHash).run();
+    } else if (existing.password_hash === 'admin123') {
+      await db.prepare('UPDATE users SET password_hash = ? WHERE id = "usr-admin"').bind(adminHash).run();
+    }
   } catch {}
 }
