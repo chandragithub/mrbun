@@ -38,7 +38,7 @@ const DEFAULT_SETTINGS = {
   logoUrl: '/logo.png',
   phone: '9476088111',
   email: 'contact@mrbun.in',
-  address: 'Mr Bun Central Kitchen & Food Hub, Commercial Avenue, Sector 4',
+  address: 'Chandra Complex, Near Kanyapuram School, Wimberlygunj, Sri Vijayapuram, A & N Islands 744206',
   aboutStory: 'With his dapper bowler hat, signature mustache, dashing red bow-tie, and enthusiastic thumbs-up, Mr Bun is the embodiment of fast food perfection. Coming straight out of a warm pizza box holding a fresh slice of cheese burst pizza, he reminds us that great food should always be fun, generous, and served with a wink! Whether it\'s a quick midnight craving or a 100-guest birthday bash, Mr Bun brings the party to your table with steaming hot patties, freshly toasted sesame buns, and handcrafted dips.',
   aboutHeroTitle: 'Crafting Happiness in Every Bite & Sip',
   aboutHeroDescription: 'Born from a deep obsession with buttery brioche buns, molten cheese burst crusts, and ice-cold artisan mocktails, Mr Bun is on a mission to elevate fast food into a culinary celebration.',

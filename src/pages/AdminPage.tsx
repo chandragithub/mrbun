@@ -2000,7 +2000,7 @@ export const AdminPage: React.FC = () => {
                       value={brandForm.address || ''}
                       onChange={(e) => setBrandForm(prev => ({ ...prev, address: e.target.value }))}
                       rows={2}
-                      placeholder="e.g. Mr Bun Central Kitchen & Food Hub, Commercial Avenue, Sector 4, Main Highway, Bangalore"
+                      placeholder="e.g. Chandra Complex, Near Kanyapuram School, Wimberlygunj, Sri Vijayapuram, A & N Islands 744206"
                       className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500"
                       required
                     />

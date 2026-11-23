@@ -111,7 +111,7 @@ export const ContactPage: React.FC = () => {
             <MapPin className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-slate-900">Central Kitchen</h3>
-          <p className="text-xs text-slate-500 line-clamp-2">{settings.address || 'Central Food Hub, Main Avenue'}</p>
+          <p className="text-xs text-slate-500 line-clamp-2">{settings.address || 'Chandra Complex, Near Kanyapuram School, Wimberlygunj, Sri Vijayapuram, A & N Islands 744206'}</p>
           <p className="text-xs font-bold text-slate-800">
             Open 11:00 AM – 01:00 AM
           </p>
@@ -293,7 +293,7 @@ export const ContactPage: React.FC = () => {
 
             <div className="pt-3 border-t border-white/20 text-[11px] text-amber-100 space-y-1">
               <p>🏢 <strong>Company:</strong> {settings.brandName}</p>
-              <p>📍 <strong>Central Location:</strong> {settings.address || 'Central Food Hub, Main Avenue'}</p>
+              <p>📍 <strong>Central Location:</strong> {settings.address || 'Chandra Complex, Near Kanyapuram School, Wimberlygunj, Sri Vijayapuram, A & N Islands 744206'}</p>
               <p>🛡️ <strong>FSSAI License:</strong> {settings.fssaiLicense}</p>
             </div>
           </div>
