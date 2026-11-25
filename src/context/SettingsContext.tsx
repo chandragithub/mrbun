@@ -34,7 +34,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   });
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      return dbService.getCachedProducts();
+    } catch {
+      return [];
+    }
+  });
   const [offers, setOffers] = useState<StoreOffer[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [packages, setPackages] = useState<PartyPackage[]>([]);
@@ -47,6 +53,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setSettings(s);
       const offs = dbService.getOffers();
       setOffers(offs);
+      const cachedProds = dbService.getCachedProducts();
+      if (cachedProds && cachedProds.length > 0) {
+        setProducts(cachedProds);
+      }
 
       // 2. Load from Cloudflare D1
       const prods = await dbService.getProducts();

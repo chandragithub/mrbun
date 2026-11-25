@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Flame, Sparkles, Star, PartyPopper } from 'lucide-react';
 import { Hero } from '../components/Hero';
 import { FoodCard } from '../components/FoodCard';
 import { MENU_PRODUCTS } from '../data/menuData';
 import { Product } from '../types';
+import { useSettings } from '../context/SettingsContext';
 
 interface HomePageProps {
   onCustomizeProduct: (product: Product) => void;
@@ -21,9 +22,15 @@ const CATEGORY_CARDS = [
 
 export const HomePage: React.FC<HomePageProps> = ({ onCustomizeProduct, onOpenPartyModal }) => {
   const navigate = useNavigate();
+  const { products: contextProducts } = useSettings();
 
-  // Bestsellers selection
-  const bestsellers = MENU_PRODUCTS.filter((p) => p.isPopular).slice(0, 4);
+  const availableProducts = contextProducts && contextProducts.length > 0 ? contextProducts : MENU_PRODUCTS;
+
+  // Bestsellers selection dynamically populated from Cloudflare D1 DB / Settings context
+  const bestsellers = useMemo(() => {
+    const popular = availableProducts.filter((p) => p.isPopular);
+    return (popular.length > 0 ? popular : availableProducts).slice(0, 4);
+  }, [availableProducts]);
 
   return (
     <div>

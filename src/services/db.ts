@@ -403,6 +403,14 @@ export const dbService = {
   },
 
   // 2. Dynamic Menu Management (Full CRUD in Cloudflare D1)
+  getCachedProducts: (category?: string): Product[] => {
+    const local = getStoredData<Product[]>(PRODUCTS_STORAGE_KEY, MENU_PRODUCTS);
+    if (!category || category === 'all') {
+      return local;
+    }
+    return local.filter(p => p.category === category);
+  },
+
   getProducts: async (category?: string): Promise<Product[]> => {
     const res = await apiCall<{ success: boolean; products: Product[] }>(
       category && category !== 'all' ? `/api/products?category=${category}` : '/api/products'
