@@ -27,6 +27,7 @@ const ORDERS_STORAGE_KEY = 'mrbun_orders_db_v2';
 const PARTY_ORDERS_STORAGE_KEY = 'mrbun_party_orders_db_v2';
 const CONTACT_MESSAGES_STORAGE_KEY = 'mrbun_contact_messages_v1';
 const CURRENT_USER_KEY = 'mrbun_active_session_v2';
+const AUTH_TOKEN_KEY = 'mrbun_auth_token_v1';
 
 export const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
   {
@@ -62,8 +63,8 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   fssaiLicense: '22926112000173',
   msg91AuthKey: '',
   msg91TemplateId: '',
-  msg91WidgetId: '3667706d6550343738383031',
-  msg91TokenAuth: '551095TZsDtgzbxo16b016ebaP1',
+  msg91WidgetId: ((import.meta as any).env?.VITE_MSG91_WIDGET_ID as string) || '',
+  msg91TokenAuth: '',
   paymentOptions: {
     cashEnabled: true,
     cashPolicyNotice: 'Cash payment is accepted strictly BEFORE food preparation begins in kitchen.',
@@ -72,7 +73,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     upiName: 'Mr Bun Fast Food Central',
     cardEnabled: true,
     cardGateway: 'cashfree',
-    cashfreeAppId: '135031343aa764f0a6ea5362ff73130531',
+    cashfreeAppId: ((import.meta as any).env?.VITE_CASHFREE_APP_ID as string) || '',
     cashfreeSecretKey: '',
     isTestMode: false
   }
@@ -291,17 +292,21 @@ const getApiEndpoint = (path: string): string => {
   return `${base}${path}`;
 };
 
-// Resilient API Fetch Helper with timeout and fallback
+// Resilient API Fetch Helper with timeout and auth header
 async function apiCall<T>(path: string, options?: RequestInit): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
 
     const fullUrl = getApiEndpoint(path);
+    const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    const authHeaders: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
+
     const res = await fetch(fullUrl, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...(options?.headers || {})
       },
       signal: controller.signal
@@ -674,23 +679,44 @@ export const dbService = {
     return { success: false, error: res.data?.error || res.error || 'Invalid OTP code. Please enter the correct code.' };
   },
 
+  getAuthToken: (): string | null => {
+    try {
+      return localStorage.getItem(AUTH_TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  },
+
+  setAuthToken: (token: string | null): void => {
+    try {
+      if (token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
+      } else {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    } catch {}
+  },
+
   login: async (identifier: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     const raw = (identifier || '').trim();
     const cleanPhone = raw.replace(/\D/g, '').slice(-10);
 
     // Call Cloudflare D1 auth endpoint
-    const res = await apiCall<{ success: boolean; user?: User; error?: string }>('/api/users/login', {
+    const res = await apiCall<{ success: boolean; user?: User; token?: string; error?: string }>('/api/users/login', {
       method: 'POST',
       body: JSON.stringify({ identifier: raw, email: raw, phone: cleanPhone, password })
     });
 
     if (res.success && res.data?.user) {
+      if (res.data.token) {
+        dbService.setAuthToken(res.data.token);
+      }
       setStoredData(CURRENT_USER_KEY, res.data.user);
       return { success: true, user: res.data.user };
     }
 
-    // Fallback for Master Administrator
-    if ((raw.toLowerCase() === 'admin@mrbun.in' || cleanPhone === '9476088111') && (password === 'admin123' || !password)) {
+    // Fallback for Master Administrator (strictly requires password verification)
+    if ((raw.toLowerCase() === 'admin@mrbun.in' || cleanPhone === '9476088111') && password === 'admin123') {
       const adminUser: User = {
         id: 'usr-admin',
         name: 'Mr Bun Master Admin',
@@ -703,13 +729,6 @@ export const dbService = {
       };
       setStoredData(CURRENT_USER_KEY, adminUser);
       return { success: true, user: adminUser };
-    }
-
-    const users = getStoredData<User[]>(USERS_STORAGE_KEY, INITIAL_USERS);
-    const existing = users.find(u => u.email.toLowerCase() === raw.toLowerCase() || u.phone === cleanPhone);
-    if (existing) {
-      setStoredData(CURRENT_USER_KEY, existing);
-      return { success: true, user: existing };
     }
 
     return { success: false, error: res.data?.error || res.error || 'Invalid credentials.' };
@@ -778,12 +797,15 @@ export const dbService = {
 
   loginWithOtp: async (phone: string, otp: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const res = await apiCall<{ success: boolean; user?: User; error?: string }>('/api/auth/login-otp', {
+    const res = await apiCall<{ success: boolean; user?: User; token?: string; error?: string }>('/api/auth/login-otp', {
       method: 'POST',
       body: JSON.stringify({ phone: cleanPhone, otp })
     });
 
     if (res.success && res.data?.user) {
+      if (res.data.token) {
+        dbService.setAuthToken(res.data.token);
+      }
       setStoredData(CURRENT_USER_KEY, res.data.user);
       return { success: true, user: res.data.user };
     }
@@ -816,12 +838,15 @@ export const dbService = {
     const normalizedEmail = (email || `${cleanPhone}@mrbun.in`).trim().toLowerCase();
 
     // Call Cloudflare D1 register endpoint
-    const res = await apiCall<{ success: boolean; user?: User; error?: string }>('/api/users/register', {
+    const res = await apiCall<{ success: boolean; user?: User; token?: string; error?: string }>('/api/users/register', {
       method: 'POST',
       body: JSON.stringify({ name, email: normalizedEmail, phone: cleanPhone, address, password, otp })
     });
 
     if (res.success && res.data?.user) {
+      if (res.data.token) {
+        dbService.setAuthToken(res.data.token);
+      }
       setStoredData(CURRENT_USER_KEY, res.data.user);
       return { success: true, user: res.data.user };
     }
@@ -898,6 +923,7 @@ export const dbService = {
   },
 
   logout: (): void => {
+    dbService.setAuthToken(null);
     localStorage.removeItem(CURRENT_USER_KEY);
   },
 

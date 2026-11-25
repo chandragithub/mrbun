@@ -60,8 +60,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const authKey = env.MSG91_AUTH_KEY || currentSettings.msg91_auth_key || '';
     const templateId = env.MSG91_TEMPLATE_ID || currentSettings.msg91_template_id || '';
-    const widgetId = env.MSG91_WIDGET_ID || currentSettings.msg91_widget_id || '3667706d6550343738383031';
-    const tokenAuth = env.MSG91_TOKEN_AUTH || currentSettings.msg91_token_auth || '551095TZsDtgzbxo16b016ebaP1';
+    const widgetId = env.MSG91_WIDGET_ID || currentSettings.msg91_widget_id || '';
+    const tokenAuth = env.MSG91_TOKEN_AUTH || currentSettings.msg91_token_auth || '';
 
     // Generate 4-digit OTP code & 10-minute expiry
     const otp = Math.floor(1000 + Math.random() * 9000).toString();

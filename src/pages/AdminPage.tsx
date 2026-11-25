@@ -315,9 +315,13 @@ export const AdminPage: React.FC = () => {
   const handleAdminQuickLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    const res = await login('admin@mrbun.in', adminPassword || 'admin123');
+    if (!adminPassword) {
+      setAuthError('Please enter your administrator password.');
+      return;
+    }
+    const res = await login('admin@mrbun.in', adminPassword);
     if (!res.success) {
-      setAuthError('Invalid credentials. (Hint: password is "admin123")');
+      setAuthError('Invalid administrator credentials.');
     } else {
       loadData();
     }
@@ -2174,7 +2178,7 @@ export const AdminPage: React.FC = () => {
                       type="text"
                       value={brandForm.msg91WidgetId || ''}
                       onChange={(e) => setBrandForm(prev => ({ ...prev, msg91WidgetId: e.target.value }))}
-                      placeholder="e.g. 3667706d6550343738383031"
+                      placeholder="e.g. your-msg91-widget-id"
                       className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 bg-white"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Found in MSG91 Panel → OTP Widget configuration.</p>
